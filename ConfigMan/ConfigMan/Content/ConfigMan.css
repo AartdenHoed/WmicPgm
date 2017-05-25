@@ -1,0 +1,212 @@
+﻿body {
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+h2, h3 {
+    font-weight: bold;
+}
+#sympaAbout {
+    overflow: hidden;
+    width: 100%;
+}
+#sympaAbout>dt {
+    width: 15%;
+    float: left;
+    clear: left;
+    text-align: right;
+    padding-right: 1%;
+}
+#sympaAbout>dd {
+    width: 50%;
+    float: left;
+}
+#wrapper {
+   width: 100%;
+   height: 100%;
+   margin: 0;
+   padding: 0;
+   box-sizing: border-box;
+   background-color: lightblue;
+}
+.header {
+    width: 100%;
+    height: 20%;
+    box-sizing: border-box;
+    float: left;
+    margin: 0;
+    background-image: url(/Images/Blueguitar.png);
+    background-size: cover;
+}
+.title {
+     text-align: center;
+     font-size: x-large;
+     font-weight: bold;
+     height: 5%;
+     width: 100%;
+     color: yellow;
+}
+.version {
+    color: white;
+    text-align: center;
+    vertical-align: central; 
+    
+}
+#sympaSprite { 
+    width: 90%;
+    height: 90%;
+    float: left;
+    margin: 2%;
+    padding: 0.5%;
+}
+.content {
+    width: 100%;
+    height: 73%;
+    box-sizing: border-box;  
+    float: left; 
+    margin: 0;
+    padding: 0; 
+}
+.footer {
+    width: 100%;
+    height: 3%;
+    box-sizing: border-box; 
+    float: left;  
+    margin: 0;
+    padding: 0; 
+    
+}
+.leftcol, .rightcol {
+    width: 15%;
+    height: 100%;
+    box-sizing: border-box;
+    float: left; 
+    margin: 0;
+    padding: 0; 
+} 
+.midcol {
+    width: 70%;
+    height: 100%;
+    box-sizing: border-box; 
+    float: left; 
+    margin: 0;
+    padding: 0;  
+}
+#content {
+    border: 2px solid black;
+    border-radius: 12px;
+    box-shadow: 6px 6px 6px Black;
+    background-color: lightblue;
+    margin-top: 0.5%;
+    padding: 0;
+    overflow: auto;
+}
+.controller {
+    margin: 1%;
+}
+.cline {
+    background-color: lightgrey;
+    text-align: center;
+    width: 100%;
+    height: 2%;
+    margin: 0;
+    padding: 0; 
+    bottom: 0;
+    position: fixed
+}
+.navigation {
+    width: 100%;
+    height: 90%;
+    box-sizing: border-box;  
+    margin: 0;
+    padding: 0;  
+}
+.menu {
+    display: block;
+    padding: 0.5%;
+    float: left;
+    width: 100%;
+    height: 70%;
+    border: solid 2px #000000;
+    border-radius: 12px;
+    box-shadow: 4px 4px 4px Black;
+    background-color: lightskyblue;
+}
+.menu>li {
+    display: block;
+    margin: 0.5%;
+    padding: 0.5%;
+    text-align: center;
+    width: 8%;
+    height: 80%;
+    float: left; 
+    list-style: none; 
+    border: solid 1px #000000;
+    border-radius: 8px;
+    box-shadow: 4px 4px 4px 0px#000000 ;
+    background-color: blue;  
+    }
+.menu>li>a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    height: 100%;
+    width: 100%;
+    border: none;
+}
+.menu>li:hover {
+    box-shadow: 4px 4px 4px 0px #000000  inset;
+    background-color: lightseagreen;  
+    font-weight: bold;
+    font-size: larger;
+}
+.index-wrapper {
+    background-image: url(/Images/ValleeEtroite.png); 
+    background-size: cover;
+    background-color: azure;
+    height: 100%;
+}
+.sympaMsg {
+    color: red;
+}
+.preload {
+    display: none;
+    background-image: url(/Images/Button.png);
+}
+.menu2 {
+    display: block;
+    padding: 0.5%;
+    width: 80%;
+    height: 100%;
+    border: solid 2px #000000;
+    border-radius: 12px;
+    box-shadow: 4px 4px 4px Black;
+    background-color: lightskyblue;
+}
+.menu2>li {
+    display: block;
+    margin: 1%;
+    padding: 1%;
+    text-align: center;
+    width: 95%;
+    height: 8%;
+    list-style: none; 
+    border: solid 1px #000000;
+    border-radius: 8px;
+    box-shadow: 4px 4px 4px 0px#000000 ;
+    background-color: blue;  
+    }
+.menu2>li>a {
+    color: white;
+    text-decoration: none;
+    display: block;
+    height: 100%;
+    width: 100%;
+    border: none;
+}
+.menu2>li:hover {
+    box-shadow: 4px 4px 4px 0px #000000  inset;
+    background-color: lightseagreen;  
+    font-weight: bold;
+    font-size: larger;
+}

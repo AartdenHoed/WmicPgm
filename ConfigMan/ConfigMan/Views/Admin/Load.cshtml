@@ -1,0 +1,20 @@
+﻿<div class="controller">
+    
+    @{
+        ViewBag.Title = "Load WMIC report";
+    }
+
+    <h2>Load latest WMIC report</h2>
+
+    <div class="sympaMsg">
+        <p>@ViewBag.SympaMsg</p>
+    </div>
+    <div id="loadfile">
+        <form action="load">
+            <input type="file" name="wmicfile">
+            <br />
+            <input type="submit">
+        </form>
+    </div>
+
+</div>

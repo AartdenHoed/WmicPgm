@@ -1,0 +1,45 @@
+﻿<div class="controller">
+    @model IEnumerable<ConfigMan.Component>
+
+    @{
+        ViewBag.Title = "Index";
+    }
+
+    <h2>Index</h2>
+
+    <p>
+        @Html.ActionLink("Create New", "Create")
+    </p>
+    <div class="sympaMsg">
+        <p>@ViewBag.SympaMsg</p>
+    </div>
+    <table class="table">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ComponentName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Vendor.VendorName)
+            </th>
+            <th></th>
+        </tr>
+
+        @foreach (var item in Model) {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ComponentName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Vendor.VendorName)
+                </td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", new { id = item.ComponentID }) |
+                    @Html.ActionLink("Details", "Details", new { id = item.ComponentID }) |
+                    @Html.ActionLink("Delete", "Delete", new { id = item.ComponentID })
+                </td>
+            </tr>
+        }
+
+    </table>
+
+</div>

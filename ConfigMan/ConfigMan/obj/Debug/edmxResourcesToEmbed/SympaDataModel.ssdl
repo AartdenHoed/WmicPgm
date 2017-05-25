@@ -1,0 +1,155 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Schema Namespace="SympaModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+  <EntityType Name="Component">
+    <Key>
+      <PropertyRef Name="ComponentName" />
+    </Key>
+    <Property Name="ComponentID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="VendorID" Type="int" Nullable="false" />
+    <Property Name="ComponentName" Type="char" MaxLength="120" Nullable="false" />
+  </EntityType>
+  <EntityType Name="Computer">
+    <Key>
+      <PropertyRef Name="ComputerName" />
+    </Key>
+    <Property Name="ComputerID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="ComputerName" Type="nchar" MaxLength="32" Nullable="false" />
+    <Property Name="ComputerPurchaseDate" Type="date" />
+  </EntityType>
+  <EntityType Name="Documentation">
+    <Key>
+      <PropertyRef Name="ComponentID" />
+    </Key>
+    <Property Name="DocumentID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="ComponentID" Type="int" Nullable="false" />
+    <Property Name="InstallationText" Type="nvarchar(max)" Nullable="false" />
+    <Property Name="LastRevisionDate" Type="date" />
+  </EntityType>
+  <EntityType Name="ICON">
+    <Key>
+      <PropertyRef Name="SubComponentName" />
+    </Key>
+    <Property Name="ComputerID" Type="int" Nullable="false" />
+    <Property Name="ComponentID" Type="int" Nullable="false" />
+    <Property Name="SubComponentName" Type="nchar" MaxLength="120" Nullable="false" />
+    <Property Name="IconName" Type="nchar" MaxLength="24" Nullable="false" />
+    <Property Name="IconCategory" Type="nchar" MaxLength="44" Nullable="false" />
+  </EntityType>
+  <EntityType Name="Installation">
+    <Key>
+      <PropertyRef Name="Release" />
+    </Key>
+    <Property Name="ComputerID" Type="int" Nullable="false" />
+    <Property Name="ComponentID" Type="int" Nullable="false" />
+    <Property Name="Release" Type="nchar" MaxLength="44" Nullable="false" />
+    <Property Name="DateMeasured" Type="date" />
+  </EntityType>
+  <EntityType Name="License">
+    <Key>
+      <PropertyRef Name="SubComponentName" />
+    </Key>
+    <Property Name="ComputerID" Type="int" Nullable="false" />
+    <Property Name="ComponentID" Type="int" Nullable="false" />
+    <Property Name="SubComponentName" Type="nchar" MaxLength="120" Nullable="false" />
+    <Property Name="LicenseType" Type="nchar" MaxLength="24" Nullable="false" />
+    <Property Name="LicenseKey" Type="nchar" MaxLength="64" Nullable="false" />
+    <Property Name="LicenseStartDate" Type="date" />
+    <Property Name="LicenseEndDate" Type="date" />
+  </EntityType>
+  <EntityType Name="sysdiagrams">
+    <Key>
+      <PropertyRef Name="diagram_id" />
+    </Key>
+    <Property Name="name" Type="nvarchar" MaxLength="128" Nullable="false" />
+    <Property Name="principal_id" Type="int" Nullable="false" />
+    <Property Name="diagram_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="version" Type="int" />
+    <Property Name="definition" Type="varbinary(max)" />
+  </EntityType>
+  <EntityType Name="Vendor">
+    <Key>
+      <PropertyRef Name="VendorName" />
+    </Key>
+    <Property Name="VendorID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="VendorName" Type="nchar" MaxLength="120" Nullable="false" />
+  </EntityType>
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_Documentation_Component' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_Documentation_Component" />-->
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_ICON_Component' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_ICON_Component" />-->
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_ICON_Computer' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_ICON_Computer" />-->
+  <Association Name="FK_ICON_ICON">
+    <End Role="ICON" Type="Self.ICON" Multiplicity="1" />
+    <End Role="ICON1" Type="Self.ICON" Multiplicity="0..1" />
+    <ReferentialConstraint>
+      <Principal Role="ICON">
+        <PropertyRef Name="SubComponentName" />
+      </Principal>
+      <Dependent Role="ICON1">
+        <PropertyRef Name="SubComponentName" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_Installation_Component' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_Installation_Component" />-->
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_Installation_Computer' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_Installation_Computer" />-->
+  <Association Name="FK_Installation_Installation">
+    <End Role="Installation" Type="Self.Installation" Multiplicity="1" />
+    <End Role="Installation1" Type="Self.Installation" Multiplicity="0..1" />
+    <ReferentialConstraint>
+      <Principal Role="Installation">
+        <PropertyRef Name="Release" />
+      </Principal>
+      <Dependent Role="Installation1">
+        <PropertyRef Name="Release" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_License_Component' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_License_Component" />-->
+  <!--Errors Found During Generation:
+warning 6035: The relationship 'FK_License_Computer' has columns that are not part of the key of the table on the primary side of the relationship. The relationship was excluded.
+        <Association Name="FK_License_Computer" />-->
+  <Association Name="FK_License_License">
+    <End Role="License" Type="Self.License" Multiplicity="1" />
+    <End Role="License1" Type="Self.License" Multiplicity="0..1" />
+    <ReferentialConstraint>
+      <Principal Role="License">
+        <PropertyRef Name="SubComponentName" />
+      </Principal>
+      <Dependent Role="License1">
+        <PropertyRef Name="SubComponentName" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityContainer Name="SympaModelStoreContainer">
+    <EntitySet Name="Component" EntityType="Self.Component" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="Computer" EntityType="Self.Computer" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="Documentation" EntityType="Self.Documentation" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="ICON" EntityType="Self.ICON" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="Installation" EntityType="Self.Installation" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="License" EntityType="Self.License" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagrams" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="Vendor" EntityType="Self.Vendor" Schema="dbo" store:Type="Tables" />
+    <AssociationSet Name="FK_ICON_ICON" Association="Self.FK_ICON_ICON">
+      <End Role="ICON" EntitySet="ICON" />
+      <End Role="ICON1" EntitySet="ICON" />
+    </AssociationSet>
+    <AssociationSet Name="FK_Installation_Installation" Association="Self.FK_Installation_Installation">
+      <End Role="Installation" EntitySet="Installation" />
+      <End Role="Installation1" EntitySet="Installation" />
+    </AssociationSet>
+    <AssociationSet Name="FK_License_License" Association="Self.FK_License_License">
+      <End Role="License" EntitySet="License" />
+      <End Role="License1" EntitySet="License" />
+    </AssociationSet>
+  </EntityContainer>
+</Schema>

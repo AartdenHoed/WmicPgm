@@ -1,0 +1,36 @@
+﻿<div class="controller">
+    @model ConfigMan.Component
+
+    @{
+        ViewBag.Title = "Details";
+    }
+
+    <h2>Details</h2>
+
+    <div>
+        <h4>Component</h4>
+        <hr />
+        <dl class="dl-horizontal">
+            <dt>
+                @Html.DisplayNameFor(model => model.ComponentName)
+            </dt>
+
+            <dd>
+                @Html.DisplayFor(model => model.ComponentName)
+            </dd>
+            <dt>
+                @Html.DisplayNameFor(model => model.Vendor.VendorName)
+            </dt>
+
+            <dd>
+                @Html.DisplayFor(model => model.Vendor.VendorName)
+            </dd>
+
+
+        </dl>
+    </div>
+    <p>
+        @Html.ActionLink("Edit", "Edit", new { id = Model.ComponentID }) |
+        @Html.ActionLink("Back to List", "Index")
+    </p>
+</div>

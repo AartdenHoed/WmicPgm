@@ -1,0 +1,46 @@
+﻿<div class="controller">
+    
+    @model IEnumerable<ConfigMan.Computer>
+
+    @{
+        ViewBag.Title = "Computer Overzicht";
+    }
+
+    <h2>Index</h2>
+
+    <p>
+        @Html.ActionLink("Create New", "Create")
+    </p>
+    <div class="sympaMsg">
+        <p>@ViewBag.SympaMsg</p>
+    </div>
+    <table class="table">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ComputerName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ComputerPurchaseDate)
+            </th>
+            <th></th>
+        </tr>
+
+        @foreach (var item in Model) {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ComputerName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ComputerPurchaseDate)
+                </td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", new { id = item.ComputerID }) |
+                    @Html.ActionLink("Details", "Details", new { id = item.ComputerID }) |
+                    @Html.ActionLink("Delete", "Delete", new { id = item.ComputerID })
+                </td>
+            </tr>
+        }
+
+    </table>
+
+</div>

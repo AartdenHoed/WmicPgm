@@ -1,0 +1,573 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="SympaModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="Component">
+          <Key>
+            <PropertyRef Name="ComponentID" />
+          </Key>
+          <Property Name="ComponentID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="VendorID" Type="int" Nullable="false" />
+          <Property Name="ComponentName" Type="char" MaxLength="120" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Computer">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+          </Key>
+          <Property Name="ComputerID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ComputerName" Type="nchar" MaxLength="32" Nullable="false" />
+          <Property Name="ComputerPurchaseDate" Type="date" />
+        </EntityType>
+        <EntityType Name="Documentation">
+          <Key>
+            <PropertyRef Name="DocumentID" />
+          </Key>
+          <Property Name="DocumentID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ComponentID" Type="int" Nullable="false" />
+          <Property Name="InstallationText" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="LastRevisionDate" Type="date" />
+        </EntityType>
+        <EntityType Name="ICON">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="SubComponentName" />
+          </Key>
+          <Property Name="ComputerID" Type="int" Nullable="false" />
+          <Property Name="ComponentID" Type="int" Nullable="false" />
+          <Property Name="SubComponentName" Type="nchar" MaxLength="120" Nullable="false" />
+          <Property Name="IconName" Type="nchar" MaxLength="24" Nullable="false" />
+          <Property Name="IconCategory" Type="nchar" MaxLength="44" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Installation">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="Release" />
+          </Key>
+          <Property Name="ComputerID" Type="int" Nullable="false" />
+          <Property Name="ComponentID" Type="int" Nullable="false" />
+          <Property Name="Release" Type="nchar" MaxLength="44" Nullable="false" />
+          <Property Name="DateMeasured" Type="date" />
+        </EntityType>
+        <EntityType Name="License">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="SubComponentName" />
+          </Key>
+          <Property Name="ComputerID" Type="int" Nullable="false" />
+          <Property Name="ComponentID" Type="int" Nullable="false" />
+          <Property Name="SubComponentName" Type="nchar" MaxLength="120" Nullable="false" />
+          <Property Name="LicenseType" Type="nchar" MaxLength="24" Nullable="false" />
+          <Property Name="LicenseKey" Type="nchar" MaxLength="64" Nullable="false" />
+          <Property Name="LicenseStartDate" Type="date" />
+          <Property Name="LicenseEndDate" Type="date" />
+        </EntityType>
+        <EntityType Name="sysdiagrams">
+          <Key>
+            <PropertyRef Name="diagram_id" />
+          </Key>
+          <Property Name="name" Type="nvarchar" MaxLength="128" Nullable="false" />
+          <Property Name="principal_id" Type="int" Nullable="false" />
+          <Property Name="diagram_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="version" Type="int" />
+          <Property Name="definition" Type="varbinary(max)" />
+        </EntityType>
+        <EntityType Name="Vendor">
+          <Key>
+            <PropertyRef Name="VendorID" />
+          </Key>
+          <Property Name="VendorID" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="VendorName" Type="nchar" MaxLength="120" Nullable="false" />
+        </EntityType>
+        <Association Name="FK_Component_Vendor">
+          <End Role="Vendor" Type="Self.Vendor" Multiplicity="1" />
+          <End Role="Component" Type="Self.Component" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Vendor">
+              <PropertyRef Name="VendorID" />
+            </Principal>
+            <Dependent Role="Component">
+              <PropertyRef Name="VendorID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Documentation_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="Documentation" Type="Self.Documentation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="Documentation">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ICON_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="ICON" Type="Self.ICON" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="ICON">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ICON_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="ICON" Type="Self.ICON" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="ICON">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Installation_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="Installation" Type="Self.Installation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="Installation">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Installation_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="Installation" Type="Self.Installation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="Installation">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_License_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="License" Type="Self.License" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="License">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_License_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="License" Type="Self.License" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="License">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="SympaModelStoreContainer">
+          <EntitySet Name="Component" EntityType="Self.Component" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Computer" EntityType="Self.Computer" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Documentation" EntityType="Self.Documentation" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ICON" EntityType="Self.ICON" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Installation" EntityType="Self.Installation" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="License" EntityType="Self.License" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagrams" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Vendor" EntityType="Self.Vendor" Schema="dbo" store:Type="Tables" />
+          <AssociationSet Name="FK_Component_Vendor" Association="Self.FK_Component_Vendor">
+            <End Role="Vendor" EntitySet="Vendor" />
+            <End Role="Component" EntitySet="Component" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Documentation_Component" Association="Self.FK_Documentation_Component">
+            <End Role="Component" EntitySet="Component" />
+            <End Role="Documentation" EntitySet="Documentation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ICON_Component" Association="Self.FK_ICON_Component">
+            <End Role="Component" EntitySet="Component" />
+            <End Role="ICON" EntitySet="ICON" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ICON_Computer" Association="Self.FK_ICON_Computer">
+            <End Role="Computer" EntitySet="Computer" />
+            <End Role="ICON" EntitySet="ICON" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Installation_Component" Association="Self.FK_Installation_Component">
+            <End Role="Component" EntitySet="Component" />
+            <End Role="Installation" EntitySet="Installation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Installation_Computer" Association="Self.FK_Installation_Computer">
+            <End Role="Computer" EntitySet="Computer" />
+            <End Role="Installation" EntitySet="Installation" />
+          </AssociationSet>
+          <AssociationSet Name="FK_License_Component" Association="Self.FK_License_Component">
+            <End Role="Component" EntitySet="Component" />
+            <End Role="License" EntitySet="License" />
+          </AssociationSet>
+          <AssociationSet Name="FK_License_Computer" Association="Self.FK_License_Computer">
+            <End Role="Computer" EntitySet="Computer" />
+            <End Role="License" EntitySet="License" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="SympaModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="Component">
+          <Key>
+            <PropertyRef Name="ComponentID" />
+          </Key>
+          <Property Name="ComponentID" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="VendorID" Type="Int32" Nullable="false" />
+          <Property Name="ComponentName" Type="String" MaxLength="120" FixedLength="true" Unicode="false" Nullable="false" />
+          <NavigationProperty Name="Vendor" Relationship="Self.FK_Component_Vendor" FromRole="Component" ToRole="Vendor" />
+          <NavigationProperty Name="Documentations" Relationship="Self.FK_Documentation_Component" FromRole="Component" ToRole="Documentation" />
+          <NavigationProperty Name="ICONs" Relationship="Self.FK_ICON_Component" FromRole="Component" ToRole="ICON" />
+          <NavigationProperty Name="Installations" Relationship="Self.FK_Installation_Component" FromRole="Component" ToRole="Installation" />
+          <NavigationProperty Name="Licenses" Relationship="Self.FK_License_Component" FromRole="Component" ToRole="License" />
+        </EntityType>
+        <EntityType Name="Computer">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+          </Key>
+          <Property Name="ComputerID" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ComputerName" Type="String" MaxLength="32" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="ComputerPurchaseDate" Type="DateTime" Precision="0" />
+          <NavigationProperty Name="ICONs" Relationship="Self.FK_ICON_Computer" FromRole="Computer" ToRole="ICON" />
+          <NavigationProperty Name="Installations" Relationship="Self.FK_Installation_Computer" FromRole="Computer" ToRole="Installation" />
+          <NavigationProperty Name="Licenses" Relationship="Self.FK_License_Computer" FromRole="Computer" ToRole="License" />
+        </EntityType>
+        <EntityType Name="Documentation">
+          <Key>
+            <PropertyRef Name="DocumentID" />
+          </Key>
+          <Property Name="DocumentID" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ComponentID" Type="Int32" Nullable="false" />
+          <Property Name="InstallationText" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="LastRevisionDate" Type="DateTime" Precision="0" />
+          <NavigationProperty Name="Component" Relationship="Self.FK_Documentation_Component" FromRole="Documentation" ToRole="Component" />
+        </EntityType>
+        <EntityType Name="ICON">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="SubComponentName" />
+          </Key>
+          <Property Name="ComputerID" Type="Int32" Nullable="false" />
+          <Property Name="ComponentID" Type="Int32" Nullable="false" />
+          <Property Name="SubComponentName" Type="String" MaxLength="120" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="IconName" Type="String" MaxLength="24" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="IconCategory" Type="String" MaxLength="44" FixedLength="true" Unicode="true" Nullable="false" />
+          <NavigationProperty Name="Component" Relationship="Self.FK_ICON_Component" FromRole="ICON" ToRole="Component" />
+          <NavigationProperty Name="Computer" Relationship="Self.FK_ICON_Computer" FromRole="ICON" ToRole="Computer" />
+        </EntityType>
+        <EntityType Name="Installation">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="Release" />
+          </Key>
+          <Property Name="ComputerID" Type="Int32" Nullable="false" />
+          <Property Name="ComponentID" Type="Int32" Nullable="false" />
+          <Property Name="Release" Type="String" MaxLength="44" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="DateMeasured" Type="DateTime" Precision="0" />
+          <NavigationProperty Name="Component" Relationship="Self.FK_Installation_Component" FromRole="Installation" ToRole="Component" />
+          <NavigationProperty Name="Computer" Relationship="Self.FK_Installation_Computer" FromRole="Installation" ToRole="Computer" />
+        </EntityType>
+        <EntityType Name="License">
+          <Key>
+            <PropertyRef Name="ComputerID" />
+            <PropertyRef Name="ComponentID" />
+            <PropertyRef Name="SubComponentName" />
+          </Key>
+          <Property Name="ComputerID" Type="Int32" Nullable="false" />
+          <Property Name="ComponentID" Type="Int32" Nullable="false" />
+          <Property Name="SubComponentName" Type="String" MaxLength="120" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="LicenseType" Type="String" MaxLength="24" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="LicenseKey" Type="String" MaxLength="64" FixedLength="true" Unicode="true" Nullable="false" />
+          <Property Name="LicenseStartDate" Type="DateTime" Precision="0" />
+          <Property Name="LicenseEndDate" Type="DateTime" Precision="0" />
+          <NavigationProperty Name="Component" Relationship="Self.FK_License_Component" FromRole="License" ToRole="Component" />
+          <NavigationProperty Name="Computer" Relationship="Self.FK_License_Computer" FromRole="License" ToRole="Computer" />
+        </EntityType>
+        <EntityType Name="sysdiagram">
+          <Key>
+            <PropertyRef Name="diagram_id" />
+          </Key>
+          <Property Name="name" Type="String" MaxLength="128" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="principal_id" Type="Int32" Nullable="false" />
+          <Property Name="diagram_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="version" Type="Int32" />
+          <Property Name="definition" Type="Binary" MaxLength="Max" FixedLength="false" />
+        </EntityType>
+        <EntityType Name="Vendor">
+          <Key>
+            <PropertyRef Name="VendorID" />
+          </Key>
+          <Property Name="VendorID" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="VendorName" Type="String" MaxLength="120" FixedLength="true" Unicode="true" Nullable="false" />
+          <NavigationProperty Name="Components" Relationship="Self.FK_Component_Vendor" FromRole="Vendor" ToRole="Component" />
+        </EntityType>
+        <Association Name="FK_Component_Vendor">
+          <End Role="Vendor" Type="Self.Vendor" Multiplicity="1" />
+          <End Role="Component" Type="Self.Component" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Vendor">
+              <PropertyRef Name="VendorID" />
+            </Principal>
+            <Dependent Role="Component">
+              <PropertyRef Name="VendorID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Documentation_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="Documentation" Type="Self.Documentation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="Documentation">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ICON_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="ICON" Type="Self.ICON" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="ICON">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Installation_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="Installation" Type="Self.Installation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="Installation">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_License_Component">
+          <End Role="Component" Type="Self.Component" Multiplicity="1" />
+          <End Role="License" Type="Self.License" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Component">
+              <PropertyRef Name="ComponentID" />
+            </Principal>
+            <Dependent Role="License">
+              <PropertyRef Name="ComponentID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_ICON_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="ICON" Type="Self.ICON" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="ICON">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_Installation_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="Installation" Type="Self.Installation" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="Installation">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_License_Computer">
+          <End Role="Computer" Type="Self.Computer" Multiplicity="1" />
+          <End Role="License" Type="Self.License" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Computer">
+              <PropertyRef Name="ComputerID" />
+            </Principal>
+            <Dependent Role="License">
+              <PropertyRef Name="ComputerID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="DbEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="Components" EntityType="Self.Component" />
+          <EntitySet Name="Computers" EntityType="Self.Computer" />
+          <EntitySet Name="Documentations" EntityType="Self.Documentation" />
+          <EntitySet Name="ICONs" EntityType="Self.ICON" />
+          <EntitySet Name="Installations" EntityType="Self.Installation" />
+          <EntitySet Name="Licenses" EntityType="Self.License" />
+          <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagram" />
+          <EntitySet Name="Vendors" EntityType="Self.Vendor" />
+          <AssociationSet Name="FK_Component_Vendor" Association="Self.FK_Component_Vendor">
+            <End Role="Vendor" EntitySet="Vendors" />
+            <End Role="Component" EntitySet="Components" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Documentation_Component" Association="Self.FK_Documentation_Component">
+            <End Role="Component" EntitySet="Components" />
+            <End Role="Documentation" EntitySet="Documentations" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ICON_Component" Association="Self.FK_ICON_Component">
+            <End Role="Component" EntitySet="Components" />
+            <End Role="ICON" EntitySet="ICONs" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Installation_Component" Association="Self.FK_Installation_Component">
+            <End Role="Component" EntitySet="Components" />
+            <End Role="Installation" EntitySet="Installations" />
+          </AssociationSet>
+          <AssociationSet Name="FK_License_Component" Association="Self.FK_License_Component">
+            <End Role="Component" EntitySet="Components" />
+            <End Role="License" EntitySet="Licenses" />
+          </AssociationSet>
+          <AssociationSet Name="FK_ICON_Computer" Association="Self.FK_ICON_Computer">
+            <End Role="Computer" EntitySet="Computers" />
+            <End Role="ICON" EntitySet="ICONs" />
+          </AssociationSet>
+          <AssociationSet Name="FK_Installation_Computer" Association="Self.FK_Installation_Computer">
+            <End Role="Computer" EntitySet="Computers" />
+            <End Role="Installation" EntitySet="Installations" />
+          </AssociationSet>
+          <AssociationSet Name="FK_License_Computer" Association="Self.FK_License_Computer">
+            <End Role="Computer" EntitySet="Computers" />
+            <End Role="License" EntitySet="Licenses" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="SympaModelStoreContainer" CdmEntityContainer="DbEntities">
+          <EntitySetMapping Name="Components">
+            <EntityTypeMapping TypeName="SympaModel.Component">
+              <MappingFragment StoreEntitySet="Component">
+                <ScalarProperty Name="ComponentID" ColumnName="ComponentID" />
+                <ScalarProperty Name="VendorID" ColumnName="VendorID" />
+                <ScalarProperty Name="ComponentName" ColumnName="ComponentName" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Computers">
+            <EntityTypeMapping TypeName="SympaModel.Computer">
+              <MappingFragment StoreEntitySet="Computer">
+                <ScalarProperty Name="ComputerID" ColumnName="ComputerID" />
+                <ScalarProperty Name="ComputerName" ColumnName="ComputerName" />
+                <ScalarProperty Name="ComputerPurchaseDate" ColumnName="ComputerPurchaseDate" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Documentations">
+            <EntityTypeMapping TypeName="SympaModel.Documentation">
+              <MappingFragment StoreEntitySet="Documentation">
+                <ScalarProperty Name="DocumentID" ColumnName="DocumentID" />
+                <ScalarProperty Name="ComponentID" ColumnName="ComponentID" />
+                <ScalarProperty Name="InstallationText" ColumnName="InstallationText" />
+                <ScalarProperty Name="LastRevisionDate" ColumnName="LastRevisionDate" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ICONs">
+            <EntityTypeMapping TypeName="SympaModel.ICON">
+              <MappingFragment StoreEntitySet="ICON">
+                <ScalarProperty Name="ComputerID" ColumnName="ComputerID" />
+                <ScalarProperty Name="ComponentID" ColumnName="ComponentID" />
+                <ScalarProperty Name="SubComponentName" ColumnName="SubComponentName" />
+                <ScalarProperty Name="IconName" ColumnName="IconName" />
+                <ScalarProperty Name="IconCategory" ColumnName="IconCategory" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Installations">
+            <EntityTypeMapping TypeName="SympaModel.Installation">
+              <MappingFragment StoreEntitySet="Installation">
+                <ScalarProperty Name="ComputerID" ColumnName="ComputerID" />
+                <ScalarProperty Name="ComponentID" ColumnName="ComponentID" />
+                <ScalarProperty Name="Release" ColumnName="Release" />
+                <ScalarProperty Name="DateMeasured" ColumnName="DateMeasured" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Licenses">
+            <EntityTypeMapping TypeName="SympaModel.License">
+              <MappingFragment StoreEntitySet="License">
+                <ScalarProperty Name="ComputerID" ColumnName="ComputerID" />
+                <ScalarProperty Name="ComponentID" ColumnName="ComponentID" />
+                <ScalarProperty Name="SubComponentName" ColumnName="SubComponentName" />
+                <ScalarProperty Name="LicenseType" ColumnName="LicenseType" />
+                <ScalarProperty Name="LicenseKey" ColumnName="LicenseKey" />
+                <ScalarProperty Name="LicenseStartDate" ColumnName="LicenseStartDate" />
+                <ScalarProperty Name="LicenseEndDate" ColumnName="LicenseEndDate" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="sysdiagrams">
+            <EntityTypeMapping TypeName="SympaModel.sysdiagram">
+              <MappingFragment StoreEntitySet="sysdiagrams">
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="principal_id" ColumnName="principal_id" />
+                <ScalarProperty Name="diagram_id" ColumnName="diagram_id" />
+                <ScalarProperty Name="version" ColumnName="version" />
+                <ScalarProperty Name="definition" ColumnName="definition" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Vendors">
+            <EntityTypeMapping TypeName="SympaModel.Vendor">
+              <MappingFragment StoreEntitySet="Vendor">
+                <ScalarProperty Name="VendorID" ColumnName="VendorID" />
+                <ScalarProperty Name="VendorName" ColumnName="VendorName" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="true" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>
