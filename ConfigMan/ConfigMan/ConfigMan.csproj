@@ -98,6 +98,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
     <Reference Include="System.Web.ApplicationServices" />
@@ -252,12 +253,14 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\ReadWMICfile.cs" />
     <Compile Include="ICON.cs">
       <DependentUpon>ConfigModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Installation.cs">
       <DependentUpon>ConfigModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="Interfaces\IReadWmicFile.cs" />
     <Compile Include="License.cs">
       <DependentUpon>ConfigModel.tt</DependentUpon>
     </Compile>

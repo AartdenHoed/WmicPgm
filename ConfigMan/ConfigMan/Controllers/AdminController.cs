@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ConfigMan.Helpers;
+using ConfigMan.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -14,9 +16,23 @@ namespace ConfigMan.Controllers
             ViewBag.SympaMsg = TempData["SympaMsg"];
             return View();
         }
-
+        
         // GET: Load
+        // Parameters: Admin/Load
+        [HttpGet]
         public ActionResult Load() {
+
+            return View();
+        }
+
+        // POST: Load
+        // Parameters: Admin/Load/wmicfile=
+        [HttpPost]
+        public ActionResult Load(string WmicFile)
+        {
+            ViewBag.SympaMsg = WmicFile;
+            ReadWMICfile wmirapport = new ReadWMICfile();
+            wmirapport.Wmirapport(WmicFile);
             return View();
         }
 
