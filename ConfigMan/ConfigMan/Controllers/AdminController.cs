@@ -1,4 +1,5 @@
-﻿using ConfigMan.Helpers;
+﻿using ConfigMan.ActionFilters;
+using ConfigMan.Helpers;
 using ConfigMan.Models;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,11 @@ using System.Web;
 using System.Web.Mvc;
 
 namespace ConfigMan.Controllers
+
 {
+    [LogActionFilter]
+    [HandleError]
+
     public class AdminController : Controller
     {
         // GET: Admin

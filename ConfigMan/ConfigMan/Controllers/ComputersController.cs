@@ -8,15 +8,22 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using ConfigMan;
+using ConfigMan.Models;
 using System.Diagnostics.Contracts;
+using ConfigMan.ActionFilters;
+using System.Diagnostics;
 
-namespace ConfigMan.Controllers
-{
+namespace ConfigMan.Controllers { 
+
+    [LogActionFilter]
+    [HandleError]
+   
     public class ComputersController : Controller
     {
         private DbEntities db = new DbEntities();
         private static bool ContractErrorOccurred = false;
         private static string ErrorMessage = " ";
+       
 
         //
         // GET: Computers
@@ -30,7 +37,7 @@ namespace ConfigMan.Controllers
             }
             else {
                 ViewBag.SympaMsg = TempData["SympaMsg"];
-            } 
+            }
             return View(db.Computers.OrderBy(x => x.ComputerName).ToList());
         }
 
@@ -39,8 +46,9 @@ namespace ConfigMan.Controllers
         //
         public ActionResult Details(int? id)
         {
-            Contract.Requires((id != null) && (id > 0));
+           
             Contract.ContractFailed += (Contract_ContractFailed);
+            Contract.Requires(id > 0, "Contract Failed!");
 
             if (!ContractErrorOccurred) {
                 Computer computer = db.Computers.Find(id);
@@ -180,5 +188,8 @@ namespace ConfigMan.Controllers
             }
             base.Dispose(disposing);
         }
+        
     }
+    
+
 }

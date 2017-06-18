@@ -9,10 +9,14 @@ using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using ConfigMan.Models;
+using ConfigMan.ActionFilters;
 
 namespace ConfigMan.Controllers
 {
     [Authorize]
+    [LogActionFilter]
+    [HandleError]
+
     public class AccountController : Controller
     {
         private ApplicationSignInManager _signInManager;

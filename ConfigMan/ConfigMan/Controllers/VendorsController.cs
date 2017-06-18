@@ -8,9 +8,13 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using ConfigMan;
+using ConfigMan.ActionFilters;
 
 namespace ConfigMan.Controllers
 {
+    [LogActionFilter]
+    [HandleError]
+
     public class VendorsController : Controller
     {
         private DbEntities db = new DbEntities();
