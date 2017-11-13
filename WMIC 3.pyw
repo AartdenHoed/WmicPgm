@@ -14,7 +14,7 @@ from pathlib import Path
 # ===================================================================================================================
 class config_data:
     def __init__(self):
-        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AartenHetty/OneDrive/Documents/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AartenHetty/OneDrive/WmicFiles/']
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
