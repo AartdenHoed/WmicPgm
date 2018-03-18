@@ -15,7 +15,7 @@ from pathlib import Path
 class config_data:
     def __init__(self):
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
-        sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AartenHetty/OneDrive/WmicFiles/']
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
@@ -23,7 +23,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 01.03"
+        self.Version = "Version 01 Release 01.05"
        
         self.PythonFile = os.path.realpath(__file__)
         self.Created = os.path.getmtime(self.PythonFile)
@@ -117,13 +117,19 @@ class My_Logger:
     def set_log(self,dataset,lvl):
         self.logfile = dataset
         self.logfileOLD = dataset + "old"
-        logsize = os.path.getsize(self.logfile)
+        if os.path.exists(self.logfile):
+            logsize = os.path.getsize(self.logfile)
+        else:
+            logsize = 0
+            logmsg = "Logdataset " + self.logfile + " will be created."
+            self.log_msg(logmsg, "info",41)
         if logsize > 1024*1024:
-            os.remove(self.logfileOLD)
-            logmsg = "OLD logdataset " + self.logfileOLD + " deleted."
-            self.log_msg(logmsg, "info",38) 
+            if os.path.exists(self.logfileOLD):
+                os.remove(self.logfileOLD)
+                logmsg = "OLD logdataset " + self.logfileOLD + " deleted."
+                self.log_msg(logmsg, "info",38) 
             os.rename(self.logfile, self.logfileOLD)
-            logmsg = "Logdataset " + self.logfile + " renamed to " + self.lofileOLD
+            logmsg = "Logdataset " + self.logfile + " renamed to " + self.logfileOLD
             self.log_msg(logmsg, "info",39)
         else:
             logmsg = "Current logdataset size is " + str(logsize) + " bytes."
