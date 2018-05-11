@@ -14,16 +14,19 @@ from pathlib import Path
 # ===================================================================================================================
 class config_data:
     def __init__(self):
-        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']        
+        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
+        
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
-        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AartenHetty/OneDrive/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
+        
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=create']
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 01.05"
+        self.Version = "Version 01 Release 01.08"
        
         self.PythonFile = os.path.realpath(__file__)
         self.Created = os.path.getmtime(self.PythonFile)
@@ -296,19 +299,25 @@ class Busy_Enqueue:
             logmsg = whenwhere.capitalize() + " CREATE WMIC run failed with output file: " + self.errordsn          
             current_log.log_msg(logmsg,"warning",26)
             try:
+                removelock = True
                 os.remove(self.errordsn)
                 logmsg = "Failed WMIC output now deleted: " + self.errordsn          
                 current_log.log_msg(logmsg,"warning",28)
             except:
                 logmsg = "Could not delete failed WMIC output: " + self.errordsn          
                 current_log.log_msg(logmsg,"error",36)
-            try:
-                os.remove(self.dsname)
-                logmsg = "WMIC lock file of " + whenwhere +  " run deleted: " + self.dsname          
-                current_log.log_msg(logmsg,"warning",29)
-            except:
-                logmsg = "Could not delete WMIC lock file of " + whenwhere +  " run: " + self.dsname          
-                current_log.log_msg(logmsg,"warning",29)
+                # Only remove lock file if errordsn does not exist
+                if ( os.path.exists(self.errordsn)) :
+                    removelock = False
+            if (removelock) :    
+                    
+                try:
+                    os.remove(self.dsname)
+                    logmsg = "WMIC lock file of " + whenwhere +  " run deleted: " + self.dsname          
+                    current_log.log_msg(logmsg,"warning",29)
+                except:
+                    logmsg = "Could not delete WMIC lock file of " + whenwhere +  " run: " + self.dsname          
+                    current_log.log_msg(logmsg,"warning",29)
           
     def EndEnq(self):
         os.remove(self.dsname)
@@ -566,11 +575,12 @@ envir = config_data()
 
 if not envir.OK:
     rccode = 2
+    current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it will end here
     logmsg = "Program end with code = " + str(rccode)
     current_log.log_msg(logmsg,"info",25)
     sys.exit(rccode)
 
-current_log.set_log(envir.logfile,envir.loglevel)
+
 os.chdir(envir.Target_dir)
 
 
@@ -624,6 +634,7 @@ elif envir.MyMode == "analyze":
             Busy_status.wait()
             
     if Busy_status.isbusy :
+        current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
         logmsg = "Analyze cancelled due to persisting WMIC lock files"
         current_log.log_msg(logmsg,"warning",34)
         rccode = 5
@@ -705,6 +716,7 @@ else:
     current_log.log_msg(logmsg,"critical",18)
     rccode = 4
 
+current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages after ENQ succeedded
 logmsg = "Program end with code = " + str(rccode)
 current_log.log_msg(logmsg,"info",25)
 
