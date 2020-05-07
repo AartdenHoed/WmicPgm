@@ -26,11 +26,14 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 01.08"
+        self.Version = "Version 01 Release 01.09"
+        self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
         self.Created = os.path.getmtime(self.PythonFile)
         self.CreatedStr = time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime(self.Created))
+        logmsg = "Python Version: " + self.PythonVersion
+        current_log.log_msg(logmsg,"info",50)
         logmsg = "Python file: " + self.PythonFile + " - Created: " + self.CreatedStr + " - Source " + self.Version
         current_log.log_msg(logmsg,"info",00)
       
