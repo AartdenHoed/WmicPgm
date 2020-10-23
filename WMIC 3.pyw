@@ -18,7 +18,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
         
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
-        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:\\AartenHetty\\OneDrive\\ADHC Output\\WmicFiles\\', '--loglevel=info']
         
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
@@ -26,7 +26,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 01.09"
+        self.Version = "Version 01 Release 01.13"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -88,7 +88,8 @@ class config_data:
                         current_log.log_msg(logmsg,"warning",24)
                         
                 elif opt == "--outputdir":
-                        self.Target_dir = arg
+                        self.Target_dir = arg.replace("\\\\", "/").replace("\\","/")
+                        # print(self.Target_dir)                              
                 else:
                     logmsg = "Wrong parameter ignored: " + opt + arg
                     current_log.log_msg(logmsg,"warning",6)
@@ -575,6 +576,7 @@ current_log.log_msg(logmsg,"info",14)
 
 # get & set parameters & environment data
 envir = config_data()
+# print(envir.logfile)
 
 if not envir.OK:
     rccode = 2
