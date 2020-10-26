@@ -5,6 +5,7 @@ import os
 import subprocess
 import logging
 import time
+import json
 from operator import itemgetter
 from datetime import datetime
 from shutil import copyfile
@@ -17,8 +18,8 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']        
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
         
-        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AHMRDH/OneDrive/WmicFiles/']
-        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:\\AartenHetty\\OneDrive\\ADHC Output\\WmicFiles\\', '--loglevel=info']
+        # sys.argv = ['The python file', '--mode=analyze']
+        # sys.argv = ['The python file', '--mode=create', '--loglevel=info']
         
         # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
         # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
@@ -26,10 +27,12 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 01.13"
+        self.Version = "Version 01 Release 02.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
+        self.PythonDirectory, self.PythonModule = os.path.split(self.PythonFile)
+        self.PythonBase = os.path.basename(os.path.normpath(self.PythonDirectory))
         self.Created = os.path.getmtime(self.PythonFile)
         self.CreatedStr = time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime(self.Created))
         logmsg = "Python Version: " + self.PythonVersion
@@ -40,12 +43,29 @@ class config_data:
         now = datetime.today()
         self.datestamp = now.strftime("%A %d %b %Y")
         self.timestamp = now.strftime("%H:%M")
-        self.Target_dir = os.path.expanduser("~") + '/WmicFiles/'
+
+        # invoke INITVAR
         
-        self.computer = os.environ['COMPUTERNAME']
+        initvar = '& "' + self.PythonFile.replace(self.PythonModule,"").replace(self.PythonBase, "PowerShell") + 'INITVAR.PS1"'
+        logmsg = "INITVAR will be invoked: " + initvar 
+        current_log.log_msg(logmsg,"info",51)
+                        
+        ch = subprocess.Popen(["powershell.exe", "-noprofile","-command",initvar, "YES" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+
+        jsonstring = out
+        print(jsonstring)
+
+        self.ADHCvariables = json.loads(jsonstring)
+                
+        self.Target_dir =  self.ADHCvariables['ADHC_WmicDirectory']
+        
+        self.computer = self.ADHCvariables['ADHC_Computer']
         self.compname = self.computer.replace("-", "_")
-        self.generations = 10
-             
+        self.generations = int(self.ADHCvariables['ADHC_WmicGenerations'])
+
+        self.outputdirectory = self.ADHCvariables['ADHC_OutputDirectory']
+        self.jobstatus = self.ADHCvariables['ADHC_Jobstatus']
        
         self.MyMode = "create"
         self.loglevel = "info"
@@ -99,19 +119,55 @@ class config_data:
         self.logfile = self.Target_dir + "WMIC_" + self.compname + ".log"
         self.busyfile = self.Target_dir + "WMIC_" + self.compname + ".busy"
         self.rptfile = self.Target_dir + "Current_WMIC_Report.txt"
+
+        self.JobProcess = "Wmic" + self.MyMode.capitalize()
+        self.MyJob = Jobstatus()
         
         yyyymmdd = now.strftime("%Y%m%d")
         self.wmicfile = "WMIC_" + self.compname + "_" + yyyymmdd + ".txt"
         self.wmictempfile = "WMIC_" + self.compname + "_" + yyyymmdd + ".tmp"  
         
-
         logmsg = "Mode = " + self.MyMode 
         current_log.log_msg(logmsg,"info",7)
-        logmsg = "Outputdir = " + self.Target_dir 
+        logmsg = "Outputdir = " + self.Target_dir + " (number of generations = " + str(self.generations) + ")"
         current_log.log_msg(logmsg,"info",8)
         self.OK = True
 
-# ===========================================================================================tm========================
+# ====================================================================================================================
+
+class Jobstatus:
+    
+    def writestatus (self, outputdir, subdir, computername, process, errlevel, version):
+        jobstatusfile = outputdir + subdir + computername + "_" + process + ".jst"
+        if os.path.exists(jobstatusfile):
+            logmsg = "Jobstatus file = " + jobstatusfile
+            current_log.log_msg(logmsg,"info",52)            
+        else:
+            logmsg = "Jobstatus file " + jobstatusfile + " created."
+            current_log.log_msg(logmsg,"info",53)
+        joboutput = open(jobstatusfile, "w", encoding="utf-8")
+
+        if (errlevel == "E"):
+            errnum = 9
+        elif (errlevel == "W"):
+            errnmum = 6
+        elif (errlevel == "I"):
+            errnum = 0
+        else:
+            logmsg = "Errolevel not recognized: "   + errlevel
+            current_log.log_msg(logmsg,"error",54)
+            errnum = 9
+
+        now = datetime.today()
+        dt = now.strftime("%d-%m-%Y %H:%M:%S")
+                
+        jobrecord = computername + "|" + process + "|" + str(errnum) + "|" + version + "|" + dt
+
+        joboutput.write(jobrecord)
+
+        joboutput.close()      
+
+# ====================================================================================================================
 
 class My_Logger:
     def __init__(self):
@@ -583,6 +639,9 @@ if not envir.OK:
     current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it will end here
     logmsg = "Program end with code = " + str(rccode)
     current_log.log_msg(logmsg,"info",25)
+
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+        
     sys.exit(rccode)
 
 
@@ -645,6 +704,7 @@ elif envir.MyMode == "analyze":
         rccode = 5
         logmsg = "Program end with code = " + str(rccode)
         current_log.log_msg(logmsg,"info",25)
+        envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
         sys.exit(rccode)
 
     WMIC_dir = WMIC_dslist()                                         # initialize list structure
@@ -719,7 +779,13 @@ elif envir.MyMode == "analyze":
 else:
     logmsg = "Something very wrong - corrupt parameters: " + envir.MyMode
     current_log.log_msg(logmsg,"critical",18)
+    
     rccode = 4
+
+if (rccode > 0) :
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version)
+else:
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version)
 
 current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages after ENQ succeedded
 logmsg = "Program end with code = " + str(rccode)
