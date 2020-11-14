@@ -1,4 +1,3 @@
-
 import sys
 import getopt
 import os
@@ -10,7 +9,6 @@ from operator import itemgetter
 from datetime import datetime
 from shutil import copyfile
 from pathlib import Path
-
 
 # ===================================================================================================================
 class config_data:
@@ -27,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 02.00"
+        self.Version = "Version 01 Release 03.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -54,10 +52,10 @@ class config_data:
         out,err = ch.communicate()
 
         jsonstring = out
-        print(jsonstring)
+        # print(jsonstring)
 
         self.ADHCvariables = json.loads(jsonstring)
-                
+
         self.Target_dir =  self.ADHCvariables['ADHC_WmicDirectory']
         
         self.computer = self.ADHCvariables['ADHC_Computer']
@@ -69,9 +67,6 @@ class config_data:
        
         self.MyMode = "create"
         self.loglevel = "info"
-
-        self.RetryCount = 5
-        self.BusyWaitTime = 5
 
         if len(sys.argv) > 1:
             try: options, remainder = getopt.getopt(sys.argv[1:],'', ['mode=','outputdir=','loglevel='])
@@ -117,7 +112,7 @@ class config_data:
         if ( not os.path.isdir(self.Target_dir)):
             os.makedirs(self.Target_dir)
         self.logfile = self.Target_dir + "WMIC_" + self.compname + ".log"
-        self.busyfile = self.Target_dir + "WMIC_" + self.compname + ".busy"
+        
         self.rptfile = self.Target_dir + "Current_WMIC_Report.txt"
 
         self.JobProcess = "Wmic" + self.MyMode.capitalize()
@@ -275,114 +270,85 @@ class My_Logger:
 
 # ===================================================================================================================
 
-class Busy_list:
+class Enqueue:    
+        
     def __init__(self):
-        self.loopcount = 1
-        self.dsnlist = []
-        # print("self")
-
-    def test (self, dsn):
-        indic = dsn[0:5]
-        extension = dsn[len(dsn)-5:len(dsn)]
-        if (indic == "WMIC_") and (extension == ".busy"):
-            return( True )
-        else:
-            return ( False )
-        
-    def check(self):
-        self.isbusy = False
-        self.dsnlist = []
-        for dirname, dirnames, filenames in os.walk('.'):
-            for filename in filenames:                      
-                if self.test(filename) == False:     # is het een geldige busy file                          
-                    pass                             # zo niet, skip
-                else:                                   # zo ja, voeg toe aan busy lijst
-                    Busy_item = Busy_Enqueue()
-                    Busy_item.modtime = os.path.getmtime(filename)
-                    Busy_item.dsname = envir.Target_dir + filename 
-                    self.dsnlist.append(Busy_item)    
-                    self.isbusy = True
-
-    def clean(self):
-        self.loopcount = self.loopcount + 1
-        present = time.time()
-        for busyfile in self.dsnlist:
-            if (busyfile.modtime < (present - 60*envir.BusyWaitTime)):
-                busyfile.CleanEnq("previous")
-        
-    def wait(self):
-        logmsg = "Clean-up did not succeed, waiting for " + str(envir.BusyWaitTime) + " minutes..."
-        current_log.log_msg(logmsg,"warning",35)
-        time.sleep(60*envir.BusyWaitTime)
-
-# ===================================================================================================================
-
-class Busy_Enqueue:
-    def __init__(self):
-        self.dsname = envir.busyfile
-        self.modtime = 0
-        # print("self")
-        
-    def StartEnq(self, wmicf):
-        # print ("start")
-        b = open(self.dsname, 'wt', encoding="utf-8")
-        busyrec = wmicf
-        b.write(busyrec)
-        b.close()
-        logmsg = "WMIC lock set in file: " + self.dsname
-        current_log.log_msg(logmsg,"info",30)
-        
-    def CleanEnq(self,whenwhere):
-        # print ("cleanup")
-        cleanneeded = True        
-        try:
-            b = open(self.dsname, 'rt', encoding="utf-8")
-            # print ("open")
-            busyrec = b.readline()
-            # print (busyrec)
-            self.errordsn = busyrec.strip()
-            # print (self.errordsn)
-            b.close()
-            # print ("close")
-            
-        except Exception as inst:
-            # print (inst)
-            cleanneeded = False
-            if (whenwhere == "previous"):
-                logmsg = "Previous CREATE WMIC run ended clean"
-                current_log.log_msg(logmsg,"info",27)
-            else:
-                logmsg = "No WMC lock file found, no clean-up needed"
-                current_log.log_msg(logmsg,"info",32)
+        self.BusyWaitTime = "10"        
+        self.LockScript = envir.ADHCvariables['ADHC_LockScript']
+        # print (self.LockScript)
                 
-        if (cleanneeded):
-            logmsg = whenwhere.capitalize() + " CREATE WMIC run failed with output file: " + self.errordsn          
-            current_log.log_msg(logmsg,"warning",26)
-            try:
-                removelock = True
-                os.remove(self.errordsn)
-                logmsg = "Failed WMIC output now deleted: " + self.errordsn          
-                current_log.log_msg(logmsg,"warning",28)
-            except:
-                logmsg = "Could not delete failed WMIC output: " + self.errordsn          
-                current_log.log_msg(logmsg,"error",36)
-                # Only remove lock file if errordsn does not exist
-                if ( os.path.exists(self.errordsn)) :
-                    removelock = False
-            if (removelock) :    
-                    
-                try:
-                    os.remove(self.dsname)
-                    logmsg = "WMIC lock file of " + whenwhere +  " run deleted: " + self.dsname          
-                    current_log.log_msg(logmsg,"warning",29)
-                except:
-                    logmsg = "Could not delete WMIC lock file of " + whenwhere +  " run: " + self.dsname          
-                    current_log.log_msg(logmsg,"warning",29)
-          
-    def EndEnq(self):
-        os.remove(self.dsname)
-        logmsg = "WMIC lock file released: " + self.dsname          
-        current_log.log_msg(logmsg,"info",31)
+    def StartEnq(self):
+        # print ("start")
+        script = self.LockScript 
+        # print (script)
+        # print (envir.JobProcess)
+
+        myscript = '& "' + self.LockScript + '"'
+        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, "LOCK" , "WMIC", envir.JobProcess, self.BusyWaitTime , "JSON"],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+        
+        msgstring = out
+        # print(msgstring)
+
+        msglist = json.loads(msgstring)
+
+        for msgentry in msglist:
+            lvl = msgentry['Level']
+            msg = msgentry['Message']
+            if lvl == "I":
+                mlvl = "info"
+            elif lvl == "A":
+                mlvl = "info"
+            else:
+                mlvl = "critical"
+            
+            current_log.log_msg(msg,mlvl,99)
+
+        # Set ERROR flag or not depending omn last message
+        if mlvl == "critical":            
+            current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
+            logmsg = "Analyze cancelled because WMIC resource is nog available"
+            current_log.log_msg(logmsg,"warning",34)
+            rccode = 5
+            logmsg = "Program end with code = " + str(rccode)
+            current_log.log_msg(logmsg,"info",25)
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
+            sys.exit(rccode)
+       
+    
+    def FreeEnq(self):
+        myscript = '& "' + self.LockScript + '"'
+        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, "FREE" , "WMIC", envir.JobProcess, self.BusyWaitTime , "JSON"],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+        
+        # Get messages
+        msgstring = out
+        # print(msgstring)
+
+        msglist = json.loads(msgstring)
+
+        for msgentry in msglist:
+            lvl = msgentry['Level']
+            msg = msgentry['Message']
+            if lvl == "I":
+                mlvl = "info"
+            elif lvl == "A":
+                mlvl = "info"
+            else:
+                mlvl = "critical"
+            
+            current_log.log_msg(msg,mlvl,99)
+
+        # Set ERROR flag or not depending omn last message
+        if mlvl == "critical":
+            current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
+            logmsg = "Analyze cancelled because WMIC resource is nog available"
+            current_log.log_msg(logmsg,"warning",34)
+            rccode = 5
+            logmsg = "Program end with code = " + str(rccode)
+            current_log.log_msg(logmsg,"info",25)
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
+            sys.exit(rccode)
         
 # ===================================================================================================================        
 
@@ -650,12 +616,9 @@ os.chdir(envir.Target_dir)
 
 if envir.MyMode == 'create':
     
-    # determine normal/abnormal end of previous run
-    AmIbusy = Busy_Enqueue()
-    
-    AmIbusy.CleanEnq("previous")
-    
-    AmIbusy.StartEnq(envir.Target_dir + envir.wmictempfile)
+    # Lock resource WMIC
+    MyLock = Enqueue()
+    MyLock.StartEnq()
 
     ch=subprocess.Popen("WMIC /output: " + envir.wmictempfile + " product get name,vendor,version",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output,err=ch.communicate()
@@ -665,7 +628,7 @@ if envir.MyMode == 'create':
         logmsg = "WMIC file creation failed on " + envir.computer + " date " + envir.datestamp + " time " + envir.timestamp + " error text: " + errstr
         current_log.log_msg(logmsg,"critical",15)
 
-        AmIbusy.CleanEnq("current")
+        MyLock.FreeEnq()
 
         rccode = 3
     else:
@@ -677,36 +640,17 @@ if envir.MyMode == 'create':
               
         WMIC_dir.del_obsolete(envir.compname,envir.generations)          # behoud voor deze computer max xx files
         
-        AmIbusy.EndEnq()
+        MyLock.FreeEnq()
     
         rccode = 0
 
 elif envir.MyMode == "analyze":
+    # Lock resource WMIC
+    MyLock = Enqueue()
+    MyLock.StartEnq()
+
     logmsg = "Analyze function entered"
     current_log.log_msg(logmsg,"info",17)
-
-    Busy_status = Busy_list()
-
-    Busy_status.check()
-    
-    while ((Busy_status.isbusy) and (Busy_status.loopcount <= envir.RetryCount)):
-        logmsg = "One or more CREATE jobs are still busy. Clean-up will be attempted. Attempt number " + str(Busy_status.loopcount) + " of " + str(envir.RetryCount)
-        current_log.log_msg(logmsg,"warning",33)
-        Busy_status.clean()
-        Busy_status.check()
-        if Busy_status.isbusy :
-            Busy_status.wait()
-            
-    if Busy_status.isbusy :
-        current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
-        logmsg = "Analyze cancelled due to persisting WMIC lock files"
-        current_log.log_msg(logmsg,"warning",34)
-        rccode = 5
-        logmsg = "Program end with code = " + str(rccode)
-        current_log.log_msg(logmsg,"info",25)
-        envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
-        sys.exit(rccode)
-
     WMIC_dir = WMIC_dslist()                                         # initialize list structure
 
     WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
@@ -774,6 +718,8 @@ elif envir.MyMode == "analyze":
     logmsg = "Analyze function completed"
     current_log.log_msg(logmsg,"info",37)
 
+    MyLock.FreeEnq()
+   
     rccode = 0
 
 else:
