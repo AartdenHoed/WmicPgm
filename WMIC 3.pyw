@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 03.00"
+        self.Version = "Version 01 Release 04.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -279,6 +279,7 @@ class Enqueue:
                 
     def StartEnq(self):
         # print ("start")
+        self.Error = False
         script = self.LockScript 
         # print (script)
         # print (envir.JobProcess)
@@ -304,16 +305,11 @@ class Enqueue:
             
             current_log.log_msg(msg,mlvl,99)
 
-        # Set ERROR flag or not depending omn last message
-        if mlvl == "critical":            
-            current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
-            logmsg = "Analyze cancelled because WMIC resource is nog available"
-            current_log.log_msg(logmsg,"warning",34)
-            rccode = 5
-            logmsg = "Program end with code = " + str(rccode)
-            current_log.log_msg(logmsg,"info",25)
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
-            sys.exit(rccode)
+        # Force abnormal end if ENQ fails. Logging impossible
+        if mlvl == "critical":
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+            endmsg = "Locking resource WMIC failed: " + msg
+            sys.exit(endmsg)           
        
     
     def FreeEnq(self):
@@ -341,14 +337,9 @@ class Enqueue:
 
         # Set ERROR flag or not depending omn last message
         if mlvl == "critical":
-            current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it willl end here
-            logmsg = "Analyze cancelled because WMIC resource is nog available"
+            logmsg = "FREEing WMIC resource failed"
             current_log.log_msg(logmsg,"warning",34)
-            rccode = 5
-            logmsg = "Program end with code = " + str(rccode)
-            current_log.log_msg(logmsg,"info",25)
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "W", envir.Version) 
-            sys.exit(rccode)
+            self.Error = True
         
 # ===================================================================================================================        
 
@@ -598,11 +589,9 @@ current_log.log_msg(logmsg,"info",14)
 
 # get & set parameters & environment data
 envir = config_data()
-# print(envir.logfile)
-
 if not envir.OK:
     rccode = 2
-    current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages because it will end here
+    
     logmsg = "Program end with code = " + str(rccode)
     current_log.log_msg(logmsg,"info",25)
 
@@ -610,16 +599,19 @@ if not envir.OK:
         
     sys.exit(rccode)
 
+# Lock resource WMIC
+MyLock = Enqueue()
+MyLock.StartEnq()
+
+current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages after ENQ succeeded
+
+
 
 os.chdir(envir.Target_dir)
 
-
 if envir.MyMode == 'create':
-    
-    # Lock resource WMIC
-    MyLock = Enqueue()
-    MyLock.StartEnq()
-
+    logmsg = "Create function entered"
+    current_log.log_msg(logmsg,"info",17)
     ch=subprocess.Popen("WMIC /output: " + envir.wmictempfile + " product get name,vendor,version",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output,err=ch.communicate()
 
@@ -627,8 +619,6 @@ if envir.MyMode == 'create':
         errstr = err.decode("utf-8")
         logmsg = "WMIC file creation failed on " + envir.computer + " date " + envir.datestamp + " time " + envir.timestamp + " error text: " + errstr
         current_log.log_msg(logmsg,"critical",15)
-
-        MyLock.FreeEnq()
 
         rccode = 3
     else:
@@ -639,16 +629,14 @@ if envir.MyMode == 'create':
         WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
               
         WMIC_dir.del_obsolete(envir.compname,envir.generations)          # behoud voor deze computer max xx files
+
+        logmsg = "Create function completed"
+        current_log.log_msg(logmsg,"info",37)
         
-        MyLock.FreeEnq()
-    
         rccode = 0
 
 elif envir.MyMode == "analyze":
-    # Lock resource WMIC
-    MyLock = Enqueue()
-    MyLock.StartEnq()
-
+    
     logmsg = "Analyze function entered"
     current_log.log_msg(logmsg,"info",17)
     WMIC_dir = WMIC_dslist()                                         # initialize list structure
@@ -700,14 +688,10 @@ elif envir.MyMode == "analyze":
                     
                     # print ("Vendor = ", venval, " Component = ", nameval, " Version = ", versval)
                     myrpt.stow_rec(compname, timestamp, venval, nameval, versval)
-
-                                       
                     
             else:
                 eof = True
-
-                              
-                            
+            
         f.close()
 
     myrpt.fillwithNAplusSORT()
@@ -718,8 +702,6 @@ elif envir.MyMode == "analyze":
     logmsg = "Analyze function completed"
     current_log.log_msg(logmsg,"info",37)
 
-    MyLock.FreeEnq()
-   
     rccode = 0
 
 else:
@@ -728,12 +710,15 @@ else:
     
     rccode = 4
 
+MyLock.FreeEnq()
+if MyLock.Error:
+    rccode = 5
+
 if (rccode > 0) :
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version)
 else:
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version)
 
-current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages after ENQ succeedded
 logmsg = "Program end with code = " + str(rccode)
 current_log.log_msg(logmsg,"info",25)
 
