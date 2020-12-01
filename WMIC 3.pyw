@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 04.00"
+        self.Version = "Version 01 Release 04.01"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -300,6 +300,8 @@ class Enqueue:
                 mlvl = "info"
             elif lvl == "A":
                 mlvl = "info"
+            elif lvl == "N":
+                mlvl = "info"
             else:
                 mlvl = "critical"
             
@@ -329,6 +331,8 @@ class Enqueue:
             if lvl == "I":
                 mlvl = "info"
             elif lvl == "A":
+                mlvl = "info"
+            elif lvl == "N":
                 mlvl = "info"
             else:
                 mlvl = "critical"
