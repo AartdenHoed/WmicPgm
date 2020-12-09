@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 04.01"
+        self.Version = "Version 01 Release 05.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -43,16 +43,22 @@ class config_data:
         self.timestamp = now.strftime("%H:%M")
 
         # invoke INITVAR
-        
-        initvar = '& "' + self.PythonFile.replace(self.PythonModule,"").replace(self.PythonBase, "PowerShell") + 'INITVAR.PS1"'
-        logmsg = "INITVAR will be invoked: " + initvar 
+        parts = self.PythonBase.split(".")
+        replacement = "Powershell"
+        for p in parts :
+            if (p.upper() == "GIT"):
+                replacement = "Powershell.git"
+                                
+        initvar = '& "' + self.PythonFile.replace(self.PythonModule,"").replace(self.PythonBase, replacement) + 'INITVAR.PS1"'
+        logmsg = "INITVAR will be invoked: " + initvar
+        # print (logmsg)
         current_log.log_msg(logmsg,"info",51)
                         
         ch = subprocess.Popen(["powershell.exe", "-noprofile","-command",initvar, "YES" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
         out,err = ch.communicate()
 
         jsonstring = out
-        # print(jsonstring)
+        # print("JSON string = " + jsonstring)
 
         self.ADHCvariables = json.loads(jsonstring)
 
@@ -63,6 +69,7 @@ class config_data:
         self.generations = int(self.ADHCvariables['ADHC_WmicGenerations'])
 
         self.outputdirectory = self.ADHCvariables['ADHC_OutputDirectory']
+        self.wmictempdir = self.ADHCvariables['ADHC_WmicTempdir']
         self.jobstatus = self.ADHCvariables['ADHC_Jobstatus']
        
         self.MyMode = "create"
@@ -109,23 +116,28 @@ class config_data:
                     logmsg = "Wrong parameter ignored: " + opt + arg
                     current_log.log_msg(logmsg,"warning",6)
         
-        if ( not os.path.isdir(self.Target_dir)):
-            os.makedirs(self.Target_dir)
+        if ( not os.path.isdir(self.wmictempdir)):
+            os.makedirs(self.wmictempdir)
         self.logfile = self.Target_dir + "WMIC_" + self.compname + ".log"
+        self.logtemp = self.wmictempdir + "WMIC_" + self.compname + ".log"
         
         self.rptfile = self.Target_dir + "Current_WMIC_Report.txt"
+        self.rpttemp = self.wmictempdir + "Current_WMIC_Report.txt"
+        self.wmictempname = "TempWMICoutput.txt"
+        self.wmictempfull = self.wmictempdir + self.wmictempname
+        # print (self.wmictempfull)
 
         self.JobProcess = "Wmic" + self.MyMode.capitalize()
         self.MyJob = Jobstatus()
         
         yyyymmdd = now.strftime("%Y%m%d")
         self.wmicfile = "WMIC_" + self.compname + "_" + yyyymmdd + ".txt"
-        self.wmictempfile = "WMIC_" + self.compname + "_" + yyyymmdd + ".tmp"  
-        
+                
         logmsg = "Mode = " + self.MyMode 
         current_log.log_msg(logmsg,"info",7)
-        logmsg = "Outputdir = " + self.Target_dir + " (number of generations = " + str(self.generations) + ")"
-        current_log.log_msg(logmsg,"info",8)
+        if self.MyMode == "create":
+            logmsg = "Outputdir = " + self.Target_dir + " (number of generations = " + str(self.generations) + ")"
+            current_log.log_msg(logmsg,"info",8)
         self.OK = True
 
 # ====================================================================================================================
@@ -171,10 +183,15 @@ class My_Logger:
         self.logfile = "none"
         self.loglvl = "info"
         self.logset = False
-
-    def set_log(self,dataset,lvl):
-        self.logfile = dataset
-        self.logfileOLD = dataset + "old"
+        
+    def set_log(self,defdataset,tempdataset,lvl):
+        self.logfile = defdataset
+        self.logfileOLD = defdataset + "old"
+        self.logtemp = tempdataset
+        if os.path.exists(tempdataset):
+            os.remove(tempdataset)
+            logmsg = "Previous temporary logdataset " + tempdataset + " deleted."
+            self.log_msg(logmsg, "info",60)
         if os.path.exists(self.logfile):
             logsize = os.path.getsize(self.logfile)
         else:
@@ -190,11 +207,11 @@ class My_Logger:
             logmsg = "Logdataset " + self.logfile + " renamed to " + self.logfileOLD
             self.log_msg(logmsg, "info",39)
         else:
-            logmsg = "Current logdataset size is " + str(logsize) + " bytes."
+            logmsg = "Current logdataset (" + self.logfile + ") size is " + str(logsize) + " bytes."
             self.log_msg(logmsg, "info",40)
         self.loglvl = lvl
         self.logset = True
-        logging.basicConfig(filename=self.logfile)
+        logging.basicConfig(filename=self.logtemp)
         if self.loglvl == "debug":
             self.Logger.setLevel(10)
         elif self.loglvl == "info" :
@@ -268,6 +285,48 @@ class My_Logger:
         retrec = l_nr + l_indic + l_timest + text
         return retrec
 
+    def log_append(self):
+        # append temp logfile to definitive logfile
+        logmsg = "Temporary logfile " + self.logtemp + " will be appended to " + self.logfile + " now."
+        self.log_msg(logmsg, "info",60) 
+        
+              
+        self.CopyMoveScript = envir.ADHCvariables['ADHC_CopyMoveScript']
+        myscript = '& "' + self.CopyMoveScript + '"'
+        t = '"' + self.logtemp + '"'
+        o = '"' + self.logfile + '"'
+        # print (t)
+        # print (o)
+        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, t, o , "COPY", "APPEND" ,"JSON" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+               
+        msgstring = out
+        # print("Msgstring = " + msgstring)
+
+        msglist = json.loads(msgstring)
+        errflag = False
+        for msgentry in msglist:
+            lvl = msgentry['Level']
+            msg = msgentry['Message']
+            if lvl == "I":
+                mlvl = "info"
+            elif lvl == "A":
+                mlvl = "info"
+            elif lvl == "N":
+                mlvl = "info"
+            else:
+                mlvl = "critical"
+                errmsg = msg
+                errflag = True
+            # print (msg)
+            current_log.log_msg(msg,mlvl,99)
+        
+        if errflag:
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+            endmsg = "LOG copy-append action failed: " + errmsg
+            sys.exit(endmsg)          
+        
+
 # ===================================================================================================================
 
 class Enqueue:    
@@ -293,6 +352,7 @@ class Enqueue:
 
         msglist = json.loads(msgstring)
 
+        errflag = False
         for msgentry in msglist:
             lvl = msgentry['Level']
             msg = msgentry['Message']
@@ -304,13 +364,15 @@ class Enqueue:
                 mlvl = "info"
             else:
                 mlvl = "critical"
+                errmsg = msg
+                errflag = True
             
             current_log.log_msg(msg,mlvl,99)
 
         # Force abnormal end if ENQ fails. Logging impossible
-        if mlvl == "critical":
+        if errflag:
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
-            endmsg = "Locking resource WMIC failed: " + msg
+            endmsg = "Locking resource WMIC failed: " + errmsg
             sys.exit(endmsg)           
        
     
@@ -325,6 +387,7 @@ class Enqueue:
 
         msglist = json.loads(msgstring)
 
+        errflag = False
         for msgentry in msglist:
             lvl = msgentry['Level']
             msg = msgentry['Message']
@@ -336,11 +399,12 @@ class Enqueue:
                 mlvl = "info"
             else:
                 mlvl = "critical"
+                errflag = True
             
             current_log.log_msg(msg,mlvl,99)
 
-        # Set ERROR flag or not depending omn last message
-        if mlvl == "critical":
+        # Set ERROR flag or not depending on error message
+        if errflag:
             logmsg = "FREEing WMIC resource failed"
             current_log.log_msg(logmsg,"warning",34)
             self.Error = True
@@ -350,6 +414,7 @@ class Enqueue:
 class WMIC_dslist:
     def __init__(self):
         self.complist = []
+        self.CopyMoveScript = envir.ADHCvariables['ADHC_CopyMoveScript']
 
     # Test if this is a valid WMIC file
     def test (self, dsn):
@@ -361,16 +426,49 @@ class WMIC_dslist:
             return ( False )
 
     # copy temp file to current WMIC
-    def copy_temp(self, dsn, tmp):
-        tst_file = Path(dsn)
+    def copy_temp(self, dsn):
+        tmpfile = envir.wmictempfull
+        deffile = envir.Target_dir + dsn
+        tst_file = Path(deffile)
         if tst_file.is_file():
             verb16 = "updated"
         else:
             verb16 = "created"
-        copyfile(tmp, dsn)
-        os.remove (tmp)
-        logmsg = "WMIC file " + verb16 + ": " + dsn
+        logmsg = "WMIC file wil be" + verb16 + ": " + dsn
         current_log.log_msg(logmsg,"info",16)
+        myscript = '& "' + self.CopyMoveScript + '"'
+        t = '"' + tmpfile + '"'
+        o = '"' + deffile + '"'
+        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, t, o, "MOVE", "REPLACE" ,"JSON" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+               
+        msgstring = out
+        # print(msgstring)
+
+        msglist = json.loads(msgstring)
+
+        errflag = False
+        for msgentry in msglist:
+            lvl = msgentry['Level']
+            msg = msgentry['Message']
+            if lvl == "I":
+                mlvl = "info"
+            elif lvl == "A":
+                mlvl = "info"
+            elif lvl == "N":
+                mlvl = "info"
+            else:
+                mlvl = "critical"
+                errmsg = msg
+                errflag = True
+            
+            current_log.log_msg(msg,mlvl,99)
+        
+        if errflag:
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+            endmsg = "WMIC file move action failed: " + errmsg
+            sys.exit(endmsg)           
+        
 
     # Add new dsname tuple to object
     def push_obj(self, dsn):
@@ -454,6 +552,7 @@ class WMIC_dslist:
 
 class report_matrix:
     def __init__(self):
+        self.CopyMoveScript = envir.ADHCvariables['ADHC_CopyMoveScript']
         self.rptlist = [["## Reporting node: " + envir.computer, " " , " "],
                         ["## Vendor ##","## Component ##","## Highest Release ##"],
                         ["###      ###","###         ###","###               ###"]]
@@ -496,9 +595,9 @@ class report_matrix:
             formit = "{:" + str(maxwidths[1]+2) + "}"
             print (formit.format(self.rptlist[i][1]))
         
-    def reportit(self,nrofrecs,outfile):
+    def reportit(self,nrofrecs,tempfile,outfile):
         maxwidths = self.getcolwidth()
-        f = open(outfile, 'wt', encoding="utf-16")
+        f = open(tempfile, 'wt', encoding="utf-16")
         max = len(self.rptlist)
         if nrofrecs > max or nrofrecs == 0:
             nrofrecs = max
@@ -518,6 +617,40 @@ class report_matrix:
             outrec = outrec + c
             f.write(outrec+"\n")
         f.close()
+        # copy temp report to definitive location
+        myscript = '& "' + self.CopyMoveScript + '"'
+
+        t = '"' + tempfile + '"'
+        o = '"' + outfile + '"'
+        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, t, o, "MOVE", "REPLACE" ,"JSON"],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        out,err = ch.communicate()
+
+        msgstring = out
+        # print(msgstring)
+
+        msglist = json.loads(msgstring)
+
+        errflag = False
+        for msgentry in msglist:
+            lvl = msgentry['Level']
+            msg = msgentry['Message']
+            if lvl == "I":
+                mlvl = "info"
+            elif lvl == "A":
+                mlvl = "info"
+            elif lvl == "N":
+                mlvl = "info"
+            else:
+                mlvl = "critical"
+                errmsg = msg
+                errflag = True
+            
+            current_log.log_msg(msg,mlvl,99)
+
+        if errflag:
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+            endmsg = "Report move action failed: " + errmsg
+            sys.exit(endmsg)           
 
     def stow_rec (self, computer, timestamp, vendor, component, release):
 
@@ -607,7 +740,7 @@ if not envir.OK:
 MyLock = Enqueue()
 MyLock.StartEnq()
 
-current_log.set_log(envir.logfile,envir.loglevel)                    # start physically writing messages after ENQ succeeded
+current_log.set_log(envir.logfile,envir.logtemp,envir.loglevel)                    # start physically writing messages after ENQ succeeded
 
 
 
@@ -616,8 +749,11 @@ os.chdir(envir.Target_dir)
 if envir.MyMode == 'create':
     logmsg = "Create function entered"
     current_log.log_msg(logmsg,"info",17)
-    ch=subprocess.Popen("WMIC /output: " + envir.wmictempfile + " product get name,vendor,version",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    # print (envir.wmictempname)
+    os.chdir(envir.wmictempdir)
+    ch=subprocess.Popen("WMIC /output: " + envir.wmictempname + " product get name,vendor,version",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output,err=ch.communicate()
+    os.chdir(envir.Target_dir)
 
     if err:
         errstr = err.decode("utf-8")
@@ -628,7 +764,7 @@ if envir.MyMode == 'create':
     else:
         WMIC_dir = WMIC_dslist()                                         # initialize list structure
 
-        WMIC_dir.copy_temp(envir.wmicfile,envir.wmictempfile)            # copy temp file to correct WMIC file
+        WMIC_dir.copy_temp(envir.wmicfile)                               # copy temp file to correct WMIC file
 
         WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
               
@@ -653,7 +789,7 @@ elif envir.MyMode == "analyze":
 
     myrpt = report_matrix()
     # print (myrpt.rptlist[0])
-   
+        
     for item in tobe_analyzed:
         compname = item[0]
         dsname = item[1]
@@ -701,7 +837,9 @@ elif envir.MyMode == "analyze":
     myrpt.fillwithNAplusSORT()
 
     myrpt.printit(50)
-    myrpt.reportit(0,envir.rptfile)
+    # print (envir.rpttemp)
+    # print(envir.rptfile)
+    myrpt.reportit(0,envir.rpttemp,envir.rptfile)
     
     logmsg = "Analyze function completed"
     current_log.log_msg(logmsg,"info",37)
@@ -714,17 +852,19 @@ else:
     
     rccode = 4
 
-MyLock.FreeEnq()
-if MyLock.Error:
-    rccode = 5
+logmsg = "Program end with code = " + str(rccode)
+current_log.log_msg(logmsg,"info",25)
+
+current_log.log_append()
 
 if (rccode > 0) :
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version)
 else:
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version)
 
-logmsg = "Program end with code = " + str(rccode)
-current_log.log_msg(logmsg,"info",25)
+MyLock.FreeEnq()
+if MyLock.Error:
+    rccode = 5
 
 sys.exit(rccode)
 
