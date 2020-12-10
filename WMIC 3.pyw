@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 05.00"
+        self.Version = "Version 01 Release 05.01"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -434,7 +434,7 @@ class WMIC_dslist:
             verb16 = "updated"
         else:
             verb16 = "created"
-        logmsg = "WMIC file wil be" + verb16 + ": " + dsn
+        logmsg = "WMIC file wil be " + verb16 + ": " + dsn
         current_log.log_msg(logmsg,"info",16)
         myscript = '& "' + self.CopyMoveScript + '"'
         t = '"' + tmpfile + '"'
