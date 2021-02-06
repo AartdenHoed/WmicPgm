@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 05.01"
+        self.Version = "Version 01 Release 06.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -144,7 +144,7 @@ class config_data:
 
 class Jobstatus:
     
-    def writestatus (self, outputdir, subdir, computername, process, errlevel, version):
+    def writestatus (self, outputdir, subdir, computername, process, errlevel, version, emsg):
         jobstatusfile = outputdir + subdir + computername + "_" + process + ".jst"
         if os.path.exists(jobstatusfile):
             logmsg = "Jobstatus file = " + jobstatusfile
@@ -171,6 +171,8 @@ class Jobstatus:
         jobrecord = computername + "|" + process + "|" + str(errnum) + "|" + version + "|" + dt
 
         joboutput.write(jobrecord)
+        joboutput.write("\n")
+        joboutput.write(emsg)
 
         joboutput.close()      
 
@@ -322,8 +324,9 @@ class My_Logger:
             current_log.log_msg(msg,mlvl,99)
         
         if errflag:
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
             endmsg = "LOG copy-append action failed: " + errmsg
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
+            
             sys.exit(endmsg)          
         
 
@@ -371,8 +374,9 @@ class Enqueue:
 
         # Force abnormal end if ENQ fails. Logging impossible
         if errflag:
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
             endmsg = "Locking resource WMIC failed: " + errmsg
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
+            
             sys.exit(endmsg)           
        
     
@@ -465,8 +469,9 @@ class WMIC_dslist:
             current_log.log_msg(msg,mlvl,99)
         
         if errflag:
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
             endmsg = "WMIC file move action failed: " + errmsg
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
+            
             sys.exit(endmsg)           
         
 
@@ -648,8 +653,9 @@ class report_matrix:
             current_log.log_msg(msg,mlvl,99)
 
         if errflag:
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
             endmsg = "Report move action failed: " + errmsg
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
+            
             sys.exit(endmsg)           
 
     def stow_rec (self, computer, timestamp, vendor, component, release):
@@ -732,7 +738,7 @@ if not envir.OK:
     logmsg = "Program end with code = " + str(rccode)
     current_log.log_msg(logmsg,"info",25)
 
-    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version) 
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,logmsg) 
         
     sys.exit(rccode)
 
@@ -858,9 +864,9 @@ current_log.log_msg(logmsg,"info",25)
 current_log.log_append()
 
 if (rccode > 0) :
-    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version)
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,logmsg)
 else:
-    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version)
+    envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version,logmsg)
 
 MyLock.FreeEnq()
 if MyLock.Error:
