@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 06.00"
+        self.Version = "Version 01 Release 06.01"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -156,6 +156,8 @@ class Jobstatus:
 
         if (errlevel == "E"):
             errnum = 9
+        elif (errlevel == "L"):
+            errnmum = 7
         elif (errlevel == "W"):
             errnmum = 6
         elif (errlevel == "I"):
@@ -375,7 +377,7 @@ class Enqueue:
         # Force abnormal end if ENQ fails. Logging impossible
         if errflag:
             endmsg = "Locking resource WMIC failed: " + errmsg
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
+            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "L", envir.Version,endmsg) 
             
             sys.exit(endmsg)           
        
