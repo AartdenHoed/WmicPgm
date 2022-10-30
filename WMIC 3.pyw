@@ -13,19 +13,17 @@ from pathlib import Path
 # ===================================================================================================================
 class config_data:
     def __init__(self):
-        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']        
-        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=D:/AartenHetty/OneDrive/WmicFiles/']
+        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=O:/ADHC Output/WmicFiles/']        
+        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=O:/ADHC Output/WmicFiles/']
         
         # sys.argv = ['The python file', '--mode=analyze']
         # sys.argv = ['The python file', '--mode=create', '--loglevel=info']
-        
-        # sys.argv = ['The python file', '--mode=create' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
-        # sys.argv = ['The python file', '--mode=analyze' ,'--outputdir=C:/Users/AHMRDH/OneDrive/Documents/WmicFiles/', '--loglevel=debug']
+                
         # sys.argv = ['The python file', '--mode=create']
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 06.01"
+        self.Version = "Version 01 Release 06.03"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -157,9 +155,9 @@ class Jobstatus:
         if (errlevel == "E"):
             errnum = 9
         elif (errlevel == "L"):
-            errnmum = 7
+            errnum = 7
         elif (errlevel == "W"):
-            errnmum = 6
+            errnum = 6
         elif (errlevel == "I"):
             errnum = 0
         else:
@@ -360,7 +358,9 @@ class Enqueue:
         errflag = False
         for msgentry in msglist:
             lvl = msgentry['Level']
+            # print(lvl)
             msg = msgentry['Message']
+            # print(msg)
             if lvl == "I":
                 mlvl = "info"
             elif lvl == "A":
