@@ -20,10 +20,11 @@ class config_data:
         # sys.argv = ['The python file', '--mode=create', '--loglevel=info']
                 
         # sys.argv = ['The python file', '--mode=create']
+        # sys.argv = ['The python file', '--mode=dbload']
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 01 Release 06.03"
+        self.Version = "Version 02 Release 03.01"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -66,6 +67,10 @@ class config_data:
         self.compname = self.computer.replace("-", "_")
         self.generations = int(self.ADHCvariables['ADHC_WmicGenerations'])
 
+        self.analysisfile = "Analysis_Copy_"+ self.compname + ".txt"
+
+        self.wmicdbload = self.ADHCvariables["ADHC_WmicDbload"]
+
         self.outputdirectory = self.ADHCvariables['ADHC_OutputDirectory']
         self.wmictempdir = self.ADHCvariables['ADHC_WmicTempdir']
         self.jobstatus = self.ADHCvariables['ADHC_Jobstatus']
@@ -93,6 +98,8 @@ class config_data:
                     if arg.lower() == "analyze": 
                         self.MyMode = arg.lower()
                     elif arg.lower() == "create":
+                        self.MyMode = arg.lower()
+                    elif arg.lower() == "dbload":
                         self.MyMode = arg.lower()
                     else:
                         logmsg = "Wrong parameter value ingnored: " + opt + arg
@@ -326,7 +333,7 @@ class My_Logger:
         if errflag:
             endmsg = "LOG copy-append action failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
-            
+            print ("** ENDED ** " + endmsg)
             sys.exit(endmsg)          
         
 
@@ -378,7 +385,7 @@ class Enqueue:
         if errflag:
             endmsg = "Locking resource WMIC failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "L", envir.Version,endmsg) 
-            
+            print ("** ENDED ** " + endmsg)
             sys.exit(endmsg)           
        
     
@@ -414,6 +421,27 @@ class Enqueue:
             logmsg = "FREEing WMIC resource failed"
             current_log.log_msg(logmsg,"warning",34)
             self.Error = True
+
+# =================================================================================================================== 
+
+class WMIC_dbload: 
+    def __init__(self):
+        dbload = envir.ADHCvariables['ADHC_WmicDbload']
+        if (dbload == "Y") :
+            self.Active = True
+        else:
+            self.Active = False
+
+    def record(self):
+        print ("Self")
+
+    def header(self, header):
+        b = 1
+
+    def load (self,line):
+        a = 1
+    
+     
         
 # ===================================================================================================================        
 
@@ -442,40 +470,50 @@ class WMIC_dslist:
             verb16 = "created"
         logmsg = "WMIC file wil be " + verb16 + ": " + dsn
         current_log.log_msg(logmsg,"info",16)
-        myscript = '& "' + self.CopyMoveScript + '"'
-        t = '"' + tmpfile + '"'
-        o = '"' + deffile + '"'
-        ch = subprocess.Popen(["powershell.exe" , "-noprofile" , "-command" , myscript, t, o, "MOVE", "REPLACE" ,"JSON" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
-        out,err = ch.communicate()
-               
-        msgstring = out
-        # print(msgstring)
 
-        msglist = json.loads(msgstring)
 
-        errflag = False
-        for msgentry in msglist:
-            lvl = msgentry['Level']
-            msg = msgentry['Message']
-            if lvl == "I":
-                mlvl = "info"
-            elif lvl == "A":
-                mlvl = "info"
-            elif lvl == "N":
-                mlvl = "info"
+        # copy temp file while addding prefix 
+        
+        infil = open(tmpfile, 'rt',encoding="utf-16")
+        outfil = open(deffile, 'wt', encoding="utf-16")
+        outfil2 = open(envir.analysisfile, 'wt', encoding="utf-16")
+        nrofrecs = 0
+        eof = False
+        now = datetime.today()
+        timestring = now.strftime("%Y-%m-%d %H:%M:%S")
+        head1 = "Computer"
+        head2 = "Timestamp"
+        lenhead1 = max(len(head1.strip()),len(envir.computer.strip()))
+        lenhead2 = max(len(head2.strip()),len(timestring.strip()))
+        prefix1 = head1.ljust(lenhead1+2) + head2.ljust(lenhead2+2)
+        prefix2 = envir.computer.ljust(lenhead1+2) + timestring.ljust(lenhead2+2)              
+        while not eof:
+            nextrec = infil.readline()
+            nrofrecs = nrofrecs + 1
+            if nextrec != "":
+                if nextrec.strip() != '':                           # skip records with only spaces
+                   if (nrofrecs == 1):
+                       prefrec = prefix1 + nextrec
+                   else:                      
+                       prefrec = prefix2+ nextrec
+                   # print(prefrec)
+                   outfil.write(prefrec)
+                   outfil2.write(prefrec)
             else:
-                mlvl = "critical"
-                errmsg = msg
-                errflag = True
+                eof = True
             
-            current_log.log_msg(msg,mlvl,99)
+        infil.close()
+        outfil.close()
+        outfil2.close()
+        logmsg = str(nrofrecs) + " Records have been copied from " + tmpfile + " to " + deffile
+        current_log.log_msg(logmsg,"info",82)
+
+        os.remove (tmpfile)
+        logmsg = tmpfile + " Has been deleted"
+        current_log.log_msg(logmsg,"info",83)
+
         
-        if errflag:
-            endmsg = "WMIC file move action failed: " + errmsg
-            envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
-            
-            sys.exit(endmsg)           
-        
+       
 
     # Add new dsname tuple to object
     def push_obj(self, dsn):
@@ -518,16 +556,19 @@ class WMIC_dslist:
                     pass                             # zo niet, skip
                 else:
                     self.push_obj(filename)          # zo ja, voeg toe aan object WMIC_dir
+        self.complist.sort(key=itemgetter(0))
+        for item in self.complist:
+            item[1].sort(key=itemgetter(2)) # most recent file LAST
+        print (self.complist)
 
     # Fill a list with the most recent WMIC file for each computer
-    def get_last_WMICS(self):
+    def get_AnalysisFiles(self):
         recents = []
-        for item in self.complist:
-            item[1].sort(key=itemgetter(2),reverse=True)
-            rtup = []
-            rtup = [item[0],item[1][0][0],item[1][0][1],item[1][0][2]]
-            recents.append(rtup)
-            
+        for dirname, dirnames, filenames in os.walk('.'):
+            for filename in filenames:                      
+                if (filename[0:13] == "Analysis_Copy"):    # is het een geldige Analyse file                          
+                    recents.append(filename)               # zo ja, voeg toe aan object WMIC_dir
+                    
         return recents       
         
 
@@ -590,9 +631,11 @@ class report_matrix:
             nrofrecs = max
         for i in range (0,nrofrecs):
             nrofcols = len(self.rptlist[i])
+            # print (str(nrofcols))
             formit = "{0:" + str(maxwidths[0]+2) + "}  {1:" + str(maxwidths[2]+2) + "}"
             print (formit.format(self.rptlist[i][0],self.rptlist[i][2]),end="" )
             maxrel = self.rptlist[i][2]
+            # print (maxrel)
             for j in range (3,nrofcols):
                 currel = self.rptlist[i][j]
                 if currel != maxrel and i > 2 and currel != "N/A":
@@ -657,7 +700,7 @@ class report_matrix:
         if errflag:
             endmsg = "Report move action failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
-            
+            print ("** ENDED ** " + endmsg)
             sys.exit(endmsg)           
 
     def stow_rec (self, computer, timestamp, vendor, component, release):
@@ -741,7 +784,7 @@ if not envir.OK:
     current_log.log_msg(logmsg,"info",25)
 
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,logmsg) 
-        
+    print ("** ENDED ** rccode = " + str(rccode))    
     sys.exit(rccode)
 
 # Lock resource WMIC
@@ -759,7 +802,7 @@ if envir.MyMode == 'create':
     current_log.log_msg(logmsg,"info",17)
     # print (envir.wmictempname)
     os.chdir(envir.wmictempdir)
-    ch=subprocess.Popen("WMIC /output: " + envir.wmictempname + " product get name,vendor,version",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    ch=subprocess.Popen("WMIC /output: " + envir.wmictempname + " product get Name,Vendor,Version,InstallLocation,InstallDate",shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     output,err=ch.communicate()
     os.chdir(envir.Target_dir)
 
@@ -772,7 +815,7 @@ if envir.MyMode == 'create':
     else:
         WMIC_dir = WMIC_dslist()                                         # initialize list structure
 
-        WMIC_dir.copy_temp(envir.wmicfile)                               # copy temp file to correct WMIC file
+        WMIC_dir.copy_temp(envir.wmicfile)                               # copy temp file to correct WMIC file + prefix
 
         WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
               
@@ -783,24 +826,80 @@ if envir.MyMode == 'create':
         
         rccode = 0
 
+elif envir.MyMode == "dbload":
+    logmsg = "DB load function entered"
+    current_log.log_msg(logmsg,"info",17)
+
+    rccode = 0
+    # print (str(rccode))
+
+    dbloadobj = WMIC_dbload()
+    
+    if (dbloadobj.Active) :
+        logmsg = "Current node able to execute db function"
+        current_log.log_msg(logmsg,"info",80)
+    else:
+        logmsg = "Db function can not be executed on this node"
+        current_log.log_msg(logmsg,"error",81)
+        rccode = 6
+
+    if (rccode == 0) :
+        WMIC_dir = WMIC_dslist()                                         # initialize list structure with WMIC datasets
+        WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
+
+    # walk through computers, per computer through datasets (last is most recent and must be kept) and load in db
+
+    for c in WMIC_dir.complist :
+        
+        firstds = True
+        dscount = len(c[1])
+        # print (str(dscount))
+        curnr = 0
+        for tuple in c[1]:
+            curds = tuple[0]
+            curnr = curnr + 1
+            # print (str(curnr) + "---" + curds)
+            firstrec = True
+            inds = open(curds, 'rt',encoding="utf-16")
+            eof = False
+            while not eof:
+                
+                nextrec = inds.readline()
+                if nextrec != "":
+                    if firstrec :
+                        dbloadobj.header(nextrec)                       # give column positions for future use
+                        firstrec = False
+                    else:
+                        
+                        dbloadobj.load(nextrec)                         # give line of values to load in db
+                else:
+                    eof = True
+            
+            inds.close()
+            if curnr == dscount :
+                firstds = False                                         # do not delete most recent (=last) file
+                print (curds + " kept") 
+            else:
+                # os.remove(curds)
+                print (curds + " not yet deleted") 
+        
+        
+
 elif envir.MyMode == "analyze":
     
     logmsg = "Analyze function entered"
     current_log.log_msg(logmsg,"info",17)
     WMIC_dir = WMIC_dslist()                                         # initialize list structure
 
-    WMIC_dir.fill_list()                                             # fill list structure with WMIC datasets
-
     tobe_analyzed = []
-    tobe_analyzed = WMIC_dir.get_last_WMICS()
+    tobe_analyzed = WMIC_dir.get_AnalysisFiles()
     # print (tobe_analyzed)
 
     myrpt = report_matrix()
     # print (myrpt.rptlist[0])
         
-    for item in tobe_analyzed:
-        compname = item[0]
-        dsname = item[1]
+    for dsname in tobe_analyzed:
+        
         f = open(dsname, 'rt',encoding="utf-16")
         eof = False
         firstrec = f.readline()
@@ -810,7 +909,15 @@ elif envir.MyMode == "analyze":
         venval = firstrec[venpos:venpos+6]
         verspos = firstrec.find("Version")
         versval = firstrec[verspos:verspos+7]
-        timestamp = dsname[-12:-4]
+        comppos = firstrec.find("Computer")
+        compval = firstrec[comppos:comppos+7]
+        timepos = firstrec.find("Timestamp")
+        timeval = firstrec[timepos:timepos+9]
+        name_end = venpos - 1
+        ven_end = verspos - 1
+        comp_end = timepos - 1
+        time_end = timepos + 19
+        
         # print (namepos,nameval,venpos,venval,verspos,versval)
         # print (len(firstrec), ">>> "+firstrec + " <<<")
         while not eof:
@@ -818,23 +925,16 @@ elif envir.MyMode == "analyze":
             if nextrec != "":
                 if nextrec.strip() != '':                           # skip records with only spaces
                     
-                    name_start = namepos
-                    name_end = nextrec.find("   ",namepos,venpos)
-                    if name_end == -1:
-                        name_end = venpos - 1
-                    nameval = nextrec[name_start:name_end].strip()
+                    nameval = nextrec[namepos:name_end].strip()
+                    compname  = nextrec[comppos:comp_end].strip()
+                    timestamp = nextrec[timepos:time_end].strip()
                     
-                    ven_start = name_end + 1
-                    ven_end = nextrec.find("   ",venpos,verspos)
-                    if ven_end == -1:
-                        ven_end = verspos - 1
-                    venval = nextrec[ven_start:ven_end].strip()
-                        
-                    vers_start = ven_end + 1
+                    venval = nextrec[venpos:ven_end].strip()
+
                     vers_end = len(nextrec)
-                    versval = nextrec[vers_start:vers_end].strip()
+                    versval = nextrec[verspos:vers_end].strip()
                     
-                    # print ("Vendor = ", venval, " Component = ", nameval, " Version = ", versval)
+                    # print ("Vendor = ", venval, " Component = ", nameval, " Version = ", versval, "Computer = ",compname," Timestamp = ", timestamp )
                     myrpt.stow_rec(compname, timestamp, venval, nameval, versval)
                     
             else:
@@ -863,17 +963,17 @@ else:
 logmsg = "Program end with code = " + str(rccode)
 current_log.log_msg(logmsg,"info",25)
 
-current_log.log_append()
-
 if (rccode > 0) :
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,logmsg)
 else:
     envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "I", envir.Version,logmsg)
 
 MyLock.FreeEnq()
+current_log.log_append()
+
 if MyLock.Error:
     rccode = 5
-
+print ("** ENDED ** rccode = " + str(rccode))  
 sys.exit(rccode)
 
 
