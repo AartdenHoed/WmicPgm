@@ -9,6 +9,7 @@ from operator import itemgetter
 from datetime import datetime
 from shutil import copyfile
 from pathlib import Path
+import pyodbc
 
 # ===================================================================================================================
 class config_data:
@@ -24,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 03.01"
+        self.Version = "Version 02 Release 05.01"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -344,6 +345,7 @@ class Enqueue:
     def __init__(self):
         self.BusyWaitTime = "10"        
         self.LockScript = envir.ADHCvariables['ADHC_LockScript']
+       
         # print (self.LockScript)
                 
     def StartEnq(self):
@@ -427,20 +429,194 @@ class Enqueue:
 class WMIC_dbload: 
     def __init__(self):
         dbload = envir.ADHCvariables['ADHC_WmicDbload']
+        self.dsname = "init"
+        self.Error = False
         if (dbload == "Y") :
             self.Active = True
+            self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=adhc-2\SQLEXPRESS;DATABASE=Sympa;TRUSTED_CONNECTION=YES')
+            self.cursor = self.cnxn.cursor()
+            self.cursor2 = self.cnxn.cursor()
         else:
             self.Active = False
 
-    def record(self):
-        print ("Self")
+    def header(self, header):        
+        
+        self.comppos = header.find("Computer")
+        self.compval = header[self.comppos:self.comppos+8]
+        
+        self.timepos = header.find("Timestamp")
+        self.timeval = header[self.timepos:self.timepos+9]
+        self.comp_end = self.timepos - 1
 
-    def header(self, header):
-        b = 1
+        self.idatepos = header.find("InstallDate")
+        self.idateval = header[self.idatepos:self.idatepos+11]
+        self.time_end = self.idatepos - 1
 
-    def load (self,line):
-        a = 1
-    
+        self.ilocpos = header.find("InstallLocation")
+        self.ilocval = header[self.ilocpos:self.ilocpos+15]
+        self.idate_end = self.ilocpos - 1
+
+        self.namepos = header.find("Name")
+        self.nameval = header[self.namepos:self.namepos+4]
+        self.iloc_end = self.namepos-1
+        
+        self.venpos = header.find("Vendor")
+        self.venval = header[self.venpos:self.venpos+6]
+        self.name_end = self.venpos - 1
+             
+        self.verspos = header.find("Version")
+        self.versval = header[self.verspos:self.verspos+7]
+        self.ven_end = self.verspos - 1
+
+        self.vers_end = len(header)
+
+        print (self.compval, self.timeval, self.idateval, self.ilocval, self.nameval, self.venval, self.versval)
+        
+        
+
+    def load (self,line,dsn):
+        self.ok = True
+        
+        self.vers_end = len(line)
+        ComputerName = line[self.comppos:self.comp_end]
+        VendorName = line[self.venpos:self.ven_end]
+        ComponentName = line[self.namepos:self.name_end]
+        Release = line[self.verspos:self.vers_end]
+        
+        qdatestring = line[self.timepos:self.time_end]
+        self.qd = qdatestring
+        qdatetime = datetime.strptime(qdatestring.strip(), '%Y-%m-%d %H:%M:%S')
+        
+        InstallDate = line[self.idatepos:self.idate_end]
+        InstallLocation = line[self.ilocpos:self.iloc_end]
+
+        # check whether this dataset already has been processed
+
+        if (self.dsname != dsn):
+            self.dsname = dsn
+
+            query = """SELECT a.ComputerName, b.MeasuredDateTime
+                        from dbo.Computer a, dbo.Installation b
+                        where a.ComputerID = b.ComputerID and a.ComputerName = ? and b.MeasuredDateTime = ? """
+            self.cursor.execute(query, ComputerName, qdatestring)
+            row = self.cursor.fetchone()
+            if row:                             # dataset already processed, return directly
+                self.ok = False
+                return (self.ok)
+              
+
+        # Check whether computer exists, if not, add it
+
+        query = "SELECT ComputerID,ComputerName,ComputerPurchaseDate FROM dbo.Computer WHERE ComputerName = ?" 
+        self.cursor.execute(query, ComputerName)
+
+        row = self.cursor.fetchone()
+        if row:
+            # print (ComputerName + " exists already")
+            ComputerID = row[0] 
+        else:
+            print (ComputerName + " not found - will be inserted")
+            query = "INSERT INTO dbo.Computer (ComputerName) VALUES (?)"
+            self.cursor.execute(query, ComputerName)
+            self.cursor.commit()
+            self.cursor.execute("SELECT @@IDENTITY AS ID")
+            ComputerID = self.cursor.fetchone()[0]    
+
+            print ('ComputerID = {0}'.format(ComputerID))
+        self.cid = ComputerID
+
+        # Check whether vendor exists, if not, add it
+
+        query = "SELECT VendorID,VendorName FROM dbo.Vendor WHERE VendorName = ?" 
+        self.cursor.execute(query, VendorName)
+
+        row = self.cursor.fetchone()
+        if row:
+            # print (VendorName + " exists already")
+            VendorID = row[0]
+        else:
+            print (VendorName + " not found - will be inserted")
+            query = "INSERT INTO dbo.Vendor (VendorName) VALUES (?)"
+            self.cursor.execute(query, VendorName)
+            self.cursor.commit()
+            self.cursor.execute("SELECT @@IDENTITY AS ID")
+            VendorID = self.cursor.fetchone()[0]    
+
+            print ('VendorID = {0}'.format(VendorID))
+
+        # Check whether component exists, if not, add it
+
+        query = "SELECT ComponentID,VendorID,ComponentName FROM dbo.Component WHERE ComponentName = ?" 
+        self.cursor.execute(query, ComponentName)
+
+        row = self.cursor.fetchone()
+        if row:
+            # print (ComponentName + " exists already")
+            ComponentID = row[0]
+            VID = row[1]
+            if (VID != VendorID) :
+                logmsg = "Vendor ID mismatch: VENDOR table contains {0}, COMPONENT table contains {1}".format(VendorID, VID)
+                print (logmsg)
+                current_log.log_msg(logmsg,"error",85)
+                self.Error = True
+            else:
+                a=1
+                # print ("Vendor ID matches: {0}".format(VendorID))
+        else:
+            print (ComponentName + " not found - will be inserted")
+            query = "INSERT INTO dbo.Component (ComponentName,VendorID) VALUES (?,?)"
+            self.cursor.execute(query, ComponentName,VendorID)
+            self.cursor.commit()
+            self.cursor.execute("SELECT @@IDENTITY AS ID")
+            ComponentID = self.cursor.fetchone()[0]    
+
+            print ('ComponentID = {0}'.format(ComponentID))
+
+        # Check whether Installation exists, handle   
+ 
+        query = """SELECT ComputerID,ComponentID,Release,Location,InstallDate,MeasuredDateTime,StartDateTime,EndDateTime,Count
+                    FROM dbo.Installation
+                    WHERE Release = ? and ComponentID = ? and ComputerID = ? and EndDateTime IS NULL"""
+        self.cursor.execute(query, Release, ComponentID, ComputerID)
+
+        rows = self.cursor.fetchall()
+        if rows:
+            for row in rows:
+                # print (row.MeasuredDateTime)
+                # print ("Component " + ComponentName + " found on computer " + ComputerName)
+                # Als de huidige measure date in het record staat, verhoog counter met 1 en update record
+                if (row.MeasuredDateTime == qdatetime) :
+                    print ("Record already in database with same MeasuredDateTime, update counter")
+                    newcount = row.Count + 1
+                    query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"
+                    self.cursor2.execute(query, newcount, ComputerID, ComponentID, Release, row.StartDateTime)
+                    self.cursor2.commit()
+                else:
+                    if (row.MeasuredDateTime <= qdatetime):
+                        # print ("Record has older MeasuredDateTime, update MeasuredDateTime and set count on 1")
+                        query = """UPDATE dbo.Installation
+                                    SET MeasuredDateTime = ? , Count = 1 
+                                    WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"""
+                        self.cursor2.execute(query, qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
+                        self.cursor2.commit()
+        else:
+            print ("Component " + ComponentName + " not found on computer " + ComputerName +", add it") 
+            query = "INSERT INTO dbo.Installation (ComputerID,ComponentID,Release,InstallDate,Location,MeasuredDateTime,StartDateTime,EndDateTime,Count) Values(?,?,?,?,?,?,?,NULL,?)"
+            self.cursor2.execute(query, ComputerID, ComponentID, Release,InstallDate,InstallLocation,qdatestring,qdatestring,1)
+            self.cursor2.commit()
+
+        return (self.ok)
+
+
+    def end_dates(self):
+        # Set Enddate for all records that have not been updated so apparantly do not exist anymore
+        print ("Set enddates")
+        query = "UPDATE dbo.Installation SET EndDateTime = ? WHERE ComputerID = ? and MeasuredDateTime < ?"
+        ended = self.cursor2.execute(query, self.qd, self.cid, self.qd).rowcount
+        self.cursor2.commit()
+        logmsg = str(ended) + " Records have gotten an end date"
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",87)
      
         
 # ===================================================================================================================        
@@ -559,7 +735,7 @@ class WMIC_dslist:
         self.complist.sort(key=itemgetter(0))
         for item in self.complist:
             item[1].sort(key=itemgetter(2)) # most recent file LAST
-        print (self.complist)
+        # print (self.complist)
 
     # Fill a list with the most recent WMIC file for each computer
     def get_AnalysisFiles(self):
@@ -851,14 +1027,10 @@ elif envir.MyMode == "dbload":
 
     for c in WMIC_dir.complist :
         
-        firstds = True
-        dscount = len(c[1])
-        # print (str(dscount))
-        curnr = 0
+        print ("========> " + c[0])
         for tuple in c[1]:
             curds = tuple[0]
-            curnr = curnr + 1
-            # print (str(curnr) + "---" + curds)
+            goodfile = True            
             firstrec = True
             inds = open(curds, 'rt',encoding="utf-16")
             eof = False
@@ -871,17 +1043,24 @@ elif envir.MyMode == "dbload":
                         firstrec = False
                     else:
                         
-                        dbloadobj.load(nextrec)                         # give line of values to load in db
+                        goodfile = dbloadobj.load(nextrec,curds)       # give line of values to load in db
+                        if (not goodfile):
+                            logmsg = "Input file " + curds +  " has already been processed, skipped"
+                            print (logmsg)            
+                            current_log.log_msg(logmsg,"info",87)
+                            eof = True
                 else:
                     eof = True
             
             inds.close()
-            if curnr == dscount :
-                firstds = False                                         # do not delete most recent (=last) file
-                print (curds + " kept") 
-            else:
-                # os.remove(curds)
-                print (curds + " not yet deleted") 
+            # os.remove(curds)
+            logmsg = "Input file " + curds +  " now deleted (NOT YET)"
+            print (logmsg)
+            
+            current_log.log_msg(logmsg,"info",86)
+
+        if (goodfile) :                                                     # only if file has not been skipped
+            dbloadobj.end_dates()                                           # set end dates for non found components on this computer
         
         
 
