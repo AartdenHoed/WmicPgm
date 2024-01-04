@@ -9,7 +9,6 @@ from operator import itemgetter
 from datetime import datetime
 from shutil import copyfile
 from pathlib import Path
-import pyodbc
 
 # ===================================================================================================================
 class config_data:
@@ -25,7 +24,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 05.01"
+        self.Version = "Version 02 Release 06.03"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -429,18 +428,50 @@ class Enqueue:
 class WMIC_dbload: 
     def __init__(self):
         dbload = envir.ADHCvariables['ADHC_WmicDbload']
-        self.dsname = "init"
+
         self.Error = False
         if (dbload == "Y") :
+            import pyodbc
             self.Active = True
             self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=adhc-2\SQLEXPRESS;DATABASE=Sympa;TRUSTED_CONNECTION=YES')
             self.cursor = self.cnxn.cursor()
             self.cursor2 = self.cnxn.cursor()
         else:
             self.Active = False
-
-    def header(self, header):        
         
+    def uniq(self,mystring, mylist):
+        if (mystring in mylist):
+            unique = False
+        else:
+            unique = True
+            mylist.append(mystring)
+        return unique
+
+    def re_init(self):
+        self.computer_exists = 0
+        self.computer_added = 0
+        self.vendor_exists = 0
+        self.vendor_added = 0
+        self.component_exists = 0
+        self.component_added = 0
+        self.processed_dsn = 0
+
+        self.dsname = "init"
+        self.skipped_dsn  = 0
+        self.wronghost_dsn = 0
+        
+        self.install_count = 0
+        self.install_date = 0
+        self.install_added = 0
+        self.install_ended = 0
+
+        self.uniq_computer = []
+        self.uniq_vendor = []
+        self.uniq_component = []
+
+    def header(self, header):
+         
+                
         self.comppos = header.find("Computer")
         self.compval = header[self.comppos:self.comppos+8]
         
@@ -470,12 +501,12 @@ class WMIC_dbload:
 
         self.vers_end = len(header)
 
-        print (self.compval, self.timeval, self.idateval, self.ilocval, self.nameval, self.venval, self.versval)
+        # print (self.compval, self.timeval, self.idateval, self.ilocval, self.nameval, self.venval, self.versval)
         
         
 
-    def load (self,line,dsn):
-        self.ok = True
+    def load (self,line,dsn,host):
+        self.ok = "Ok"
         
         self.vers_end = len(line)
         ComputerName = line[self.comppos:self.comp_end]
@@ -490,6 +521,12 @@ class WMIC_dbload:
         InstallDate = line[self.idatepos:self.idate_end]
         InstallLocation = line[self.ilocpos:self.iloc_end]
 
+        # check whether this dataset is for this host
+        if (host.strip().replace("_","-") != ComputerName.strip().replace("_","-")):
+            self.wronghost_dsn = self.wronghost_dsn + 1
+            self.ok = "Wrong host"
+            return (self.ok)
+
         # check whether this dataset already has been processed
 
         if (self.dsname != dsn):
@@ -497,13 +534,15 @@ class WMIC_dbload:
 
             query = """SELECT a.ComputerName, b.MeasuredDateTime
                         from dbo.Computer a, dbo.Installation b
-                        where a.ComputerID = b.ComputerID and a.ComputerName = ? and b.MeasuredDateTime = ? """
+                        where a.ComputerID = b.ComputerID and a.ComputerName = ? and b.MeasuredDateTime >= ? """
             self.cursor.execute(query, ComputerName, qdatestring)
             row = self.cursor.fetchone()
             if row:                             # dataset already processed, return directly
-                self.ok = False
+                self.ok = "Contains older timestamps"                
+                self.skipped_dsn  = self.skipped_dsn + 1
                 return (self.ok)
-              
+            else:
+                self.processed_dsn = self.processed_dsn + 1              
 
         # Check whether computer exists, if not, add it
 
@@ -513,15 +552,19 @@ class WMIC_dbload:
         row = self.cursor.fetchone()
         if row:
             # print (ComputerName + " exists already")
-            ComputerID = row[0] 
+            ComputerID = row[0]
+            if (self.uniq(ComputerName,self.uniq_computer)):
+                self.computer_exists = self.computer_exists + 1
         else:
             print (ComputerName + " not found - will be inserted")
             query = "INSERT INTO dbo.Computer (ComputerName) VALUES (?)"
             self.cursor.execute(query, ComputerName)
             self.cursor.commit()
             self.cursor.execute("SELECT @@IDENTITY AS ID")
-            ComputerID = self.cursor.fetchone()[0]    
-
+            ComputerID = self.cursor.fetchone()[0]
+            if (self.uniq(ComputerName,self.uniq_computer)):
+                self.computer_added = self.computer_added + 1
+            
             print ('ComputerID = {0}'.format(ComputerID))
         self.cid = ComputerID
 
@@ -534,13 +577,17 @@ class WMIC_dbload:
         if row:
             # print (VendorName + " exists already")
             VendorID = row[0]
+            if (self.uniq(VendorName,self.uniq_vendor)):
+                self.vendor_exists = self.vendor_exists + 1        
         else:
             print (VendorName + " not found - will be inserted")
             query = "INSERT INTO dbo.Vendor (VendorName) VALUES (?)"
             self.cursor.execute(query, VendorName)
             self.cursor.commit()
             self.cursor.execute("SELECT @@IDENTITY AS ID")
-            VendorID = self.cursor.fetchone()[0]    
+            VendorID = self.cursor.fetchone()[0]
+            if (self.uniq(VendorName,self.uniq_vendor)):
+                self.vendor_added = self.vendor_added + 1
 
             print ('VendorID = {0}'.format(VendorID))
 
@@ -562,13 +609,17 @@ class WMIC_dbload:
             else:
                 a=1
                 # print ("Vendor ID matches: {0}".format(VendorID))
+            if (self.uniq(ComponentName,self.uniq_component)):
+                self.component_exists = self.component_exists + 1        
         else:
             print (ComponentName + " not found - will be inserted")
             query = "INSERT INTO dbo.Component (ComponentName,VendorID) VALUES (?,?)"
             self.cursor.execute(query, ComponentName,VendorID)
             self.cursor.commit()
             self.cursor.execute("SELECT @@IDENTITY AS ID")
-            ComponentID = self.cursor.fetchone()[0]    
+            ComponentID = self.cursor.fetchone()[0]
+            if (self.uniq(ComponentName,self.uniq_component)):
+                self.component_added = self.component_added + 1
 
             print ('ComponentID = {0}'.format(ComponentID))
 
@@ -591,19 +642,22 @@ class WMIC_dbload:
                     query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"
                     self.cursor2.execute(query, newcount, ComputerID, ComponentID, Release, row.StartDateTime)
                     self.cursor2.commit()
+                    self.install_count = self.install_count + 1       
                 else:
-                    if (row.MeasuredDateTime <= qdatetime):
-                        # print ("Record has older MeasuredDateTime, update MeasuredDateTime and set count on 1")
-                        query = """UPDATE dbo.Installation
-                                    SET MeasuredDateTime = ? , Count = 1 
-                                    WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"""
-                        self.cursor2.execute(query, qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
-                        self.cursor2.commit()
+                    # current measureddatetime MUST be less (older) qdatetime, because otherwise the dataset would have been skipped
+                    # print ("Record has older MeasuredDateTime, update MeasuredDateTime and set count on 1")
+                    query = """UPDATE dbo.Installation
+                                SET MeasuredDateTime = ? , Count = 1 
+                                WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"""
+                    self.cursor2.execute(query, qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
+                    self.cursor2.commit()
+                    self.install_date = self.install_date + 1        
         else:
             print ("Component " + ComponentName + " not found on computer " + ComputerName +", add it") 
             query = "INSERT INTO dbo.Installation (ComputerID,ComponentID,Release,InstallDate,Location,MeasuredDateTime,StartDateTime,EndDateTime,Count) Values(?,?,?,?,?,?,?,NULL,?)"
             self.cursor2.execute(query, ComputerID, ComponentID, Release,InstallDate,InstallLocation,qdatestring,qdatestring,1)
             self.cursor2.commit()
+            self.install_added = self.install_added + 1
 
         return (self.ok)
 
@@ -612,11 +666,8 @@ class WMIC_dbload:
         # Set Enddate for all records that have not been updated so apparantly do not exist anymore
         print ("Set enddates")
         query = "UPDATE dbo.Installation SET EndDateTime = ? WHERE ComputerID = ? and MeasuredDateTime < ?"
-        ended = self.cursor2.execute(query, self.qd, self.cid, self.qd).rowcount
-        self.cursor2.commit()
-        logmsg = str(ended) + " Records have gotten an end date"
-        print (logmsg)
-        current_log.log_msg(logmsg,"info",87)
+        self.install_ended = self.cursor2.execute(query, self.qd, self.cid, self.qd).rowcount
+        
      
         
 # ===================================================================================================================        
@@ -1026,11 +1077,18 @@ elif envir.MyMode == "dbload":
     # walk through computers, per computer through datasets (last is most recent and must be kept) and load in db
 
     for c in WMIC_dir.complist :
+
+        logmsg = "Processing host " + c[0]
+        print (logmsg)            
+        current_log.log_msg(logmsg,"info",89)
+
+        dbloadobj.re_init()
         
-        print ("========> " + c[0])
         for tuple in c[1]:
+            
+            
             curds = tuple[0]
-            goodfile = True            
+                     
             firstrec = True
             inds = open(curds, 'rt',encoding="utf-16")
             eof = False
@@ -1043,9 +1101,9 @@ elif envir.MyMode == "dbload":
                         firstrec = False
                     else:
                         
-                        goodfile = dbloadobj.load(nextrec,curds)       # give line of values to load in db
-                        if (not goodfile):
-                            logmsg = "Input file " + curds +  " has already been processed, skipped"
+                        goodfile = dbloadobj.load(nextrec,curds,c[0])       # give line of values to load in db
+                        if (goodfile != "Ok"):
+                            logmsg = "Input file " + curds +  " has been skipped (" + goodfile + ")"
                             print (logmsg)            
                             current_log.log_msg(logmsg,"info",87)
                             eof = True
@@ -1053,17 +1111,42 @@ elif envir.MyMode == "dbload":
                     eof = True
             
             inds.close()
-            # os.remove(curds)
-            logmsg = "Input file " + curds +  " now deleted (NOT YET)"
+            os.remove(curds)
+            logmsg = "Input file " + curds +  " now deleted"
             print (logmsg)
             
             current_log.log_msg(logmsg,"info",86)
 
-        if (goodfile) :                                                     # only if file has not been skipped
+        if (goodfile == "Ok") :                                                     # only if file has not been skipped
             dbloadobj.end_dates()                                           # set end dates for non found components on this computer
-        
-        
 
+        dsntotal = dbloadobj.processed_dsn + dbloadobj.skipped_dsn + dbloadobj.wronghost_dsn
+        logmsg = "Total datasets = "+ str(dsntotal) + " *** processed = " + str(dbloadobj.processed_dsn) + " *** skipped (too old) = " + str(dbloadobj.skipped_dsn) + " *** skipped (wrong host) " + str(dbloadobj.wronghost_dsn)
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",88)
+
+        computertotal = dbloadobj.computer_exists + dbloadobj.computer_added 
+        logmsg = "Total computers = "+ str(computertotal) + " *** existing = " + str(dbloadobj.computer_exists) + " *** added = " + str(dbloadobj.computer_added)
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",88)
+        
+        vendortotal = dbloadobj.vendor_exists +   dbloadobj.vendor_added 
+        logmsg = "Total vendors = "+ str(vendortotal) + " *** existing = " + str(dbloadobj.vendor_exists) + " *** added = " + str(dbloadobj.vendor_added)
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",88)
+        
+        componenttotal = dbloadobj.component_exists + dbloadobj.component_added 
+        logmsg = "Total components = "+ str(componenttotal) + " *** existing = " + str(dbloadobj.component_exists) + " *** added = " + str(dbloadobj.component_added)
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",88)
+        
+        
+        installtotal = dbloadobj.install_count + dbloadobj.install_date + dbloadobj.install_added + dbloadobj.install_ended 
+        logmsg = "Total installations = "+ str(installtotal) +  " *** added = " + str(dbloadobj.install_added) + " *** actualized date = " + str(dbloadobj.install_date) + " *** counter updated = " + str(dbloadobj.install_count) + " *** ended = " + str(dbloadobj.install_ended)                   
+        print (logmsg)
+        current_log.log_msg(logmsg,"info",88)
+        
+ 
 elif envir.MyMode == "analyze":
     
     logmsg = "Analyze function entered"
