@@ -24,7 +24,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 06.03"
+        self.Version = "Version 02 Release 06.04"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -637,7 +637,7 @@ class WMIC_dbload:
                 # print ("Component " + ComponentName + " found on computer " + ComputerName)
                 # Als de huidige measure date in het record staat, verhoog counter met 1 en update record
                 if (row.MeasuredDateTime == qdatetime) :
-                    print ("Record already in database with same MeasuredDateTime, update counter")
+                    # print ("Record already in database with same MeasuredDateTime, update counter")
                     newcount = row.Count + 1
                     query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"
                     self.cursor2.execute(query, newcount, ComputerID, ComponentID, Release, row.StartDateTime)
@@ -665,7 +665,7 @@ class WMIC_dbload:
     def end_dates(self):
         # Set Enddate for all records that have not been updated so apparantly do not exist anymore
         print ("Set enddates")
-        query = "UPDATE dbo.Installation SET EndDateTime = ? WHERE ComputerID = ? and MeasuredDateTime < ?"
+        query = "UPDATE dbo.Installation SET EndDateTime = ? WHERE ComputerID = ? and MeasuredDateTime < ? and EndDateTime IS NULL"
         self.install_ended = self.cursor2.execute(query, self.qd, self.cid, self.qd).rowcount
         
      
