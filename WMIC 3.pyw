@@ -24,7 +24,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 06.04"
+        self.Version = "Version 02 Release 06.05"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -508,7 +508,7 @@ class WMIC_dbload:
     def load (self,line,dsn,host):
         self.ok = "Ok"
         
-        self.vers_end = len(line)
+        self.vers_end = len(line) - 2 # account for CRLF (x'0D0A')
         ComputerName = line[self.comppos:self.comp_end]
         VendorName = line[self.venpos:self.ven_end]
         ComponentName = line[self.namepos:self.name_end]
