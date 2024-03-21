@@ -24,7 +24,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 06.05"
+        self.Version = "Version 02 Release 06.09"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -168,14 +168,14 @@ class Jobstatus:
         elif (errlevel == "I"):
             errnum = 0
         else:
-            logmsg = "Errolevel not recognized: "   + errlevel
+            logmsg = "Errorlevel not recognized: "   + errlevel
             current_log.log_msg(logmsg,"error",54)
             errnum = 9
 
-        now = datetime.today()
-        dt = now.strftime("%d-%m-%Y %H:%M:%S")
+        jobtime = datetime.today()
+        jobtimestr = jobtime.strftime("%d-%m-%Y %H:%M:%S")
                 
-        jobrecord = computername + "|" + process + "|" + str(errnum) + "|" + version + "|" + dt
+        jobrecord = computername + "|" + process + "|" + str(errnum) + "|" + version + "|" + jobtimestr
 
         joboutput.write(jobrecord)
         joboutput.write("\n")
@@ -514,9 +514,8 @@ class WMIC_dbload:
         ComponentName = line[self.namepos:self.name_end]
         Release = line[self.verspos:self.vers_end]
         
-        qdatestring = line[self.timepos:self.time_end]
-        self.qd = qdatestring
-        qdatetime = datetime.strptime(qdatestring.strip(), '%Y-%m-%d %H:%M:%S')
+        self.qdatestring = line[self.timepos:self.time_end]        
+        self.qdatetime = datetime.strptime(self.qdatestring.strip(), '%Y-%m-%d %H:%M:%S')
         
         InstallDate = line[self.idatepos:self.idate_end]
         InstallLocation = line[self.ilocpos:self.iloc_end]
@@ -534,8 +533,8 @@ class WMIC_dbload:
 
             query = """SELECT a.ComputerName, b.MeasuredDateTime
                         from dbo.Computer a, dbo.Installation b
-                        where a.ComputerID = b.ComputerID and a.ComputerName = ? and b.MeasuredDateTime >= ? """
-            self.cursor.execute(query, ComputerName, qdatestring)
+                        where a.ComputerID = b.ComputerID and a.ComputerName = ? and datediff(ss,?,b.MeasuredDateTime) > 0 """
+            self.cursor.execute(query, ComputerName, self.qdatestring)
             row = self.cursor.fetchone()
             if row:                             # dataset already processed, return directly
                 self.ok = "Contains older timestamps"                
@@ -581,8 +580,8 @@ class WMIC_dbload:
                 self.vendor_exists = self.vendor_exists + 1        
         else:
             print (VendorName + " not found - will be inserted")
-            query = "INSERT INTO dbo.Vendor (VendorName) VALUES (?)"
-            self.cursor.execute(query, VendorName)
+            query = "INSERT INTO dbo.Vendor (VendorName,VendorGroup) VALUES (?,?)"
+            self.cursor.execute(query, VendorName, VendorName)
             self.cursor.commit()
             self.cursor.execute("SELECT @@IDENTITY AS ID")
             VendorID = self.cursor.fetchone()[0]
@@ -636,7 +635,7 @@ class WMIC_dbload:
                 # print (row.MeasuredDateTime)
                 # print ("Component " + ComponentName + " found on computer " + ComputerName)
                 # Als de huidige measure date in het record staat, verhoog counter met 1 en update record
-                if (row.MeasuredDateTime == qdatetime) :
+                if (row.MeasuredDateTime == self.qdatetime) :
                     # print ("Record already in database with same MeasuredDateTime, update counter")
                     newcount = row.Count + 1
                     query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"
@@ -649,13 +648,13 @@ class WMIC_dbload:
                     query = """UPDATE dbo.Installation
                                 SET MeasuredDateTime = ? , Count = 1 
                                 WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"""
-                    self.cursor2.execute(query, qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
+                    self.cursor2.execute(query, self.qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
                     self.cursor2.commit()
                     self.install_date = self.install_date + 1        
         else:
             print ("Component " + ComponentName + " not found on computer " + ComputerName +", add it") 
             query = "INSERT INTO dbo.Installation (ComputerID,ComponentID,Release,InstallDate,Location,MeasuredDateTime,StartDateTime,EndDateTime,Count) Values(?,?,?,?,?,?,?,NULL,?)"
-            self.cursor2.execute(query, ComputerID, ComponentID, Release,InstallDate,InstallLocation,qdatestring,qdatestring,1)
+            self.cursor2.execute(query, ComputerID, ComponentID, Release,InstallDate,InstallLocation,self.qdatestring,self.qdatestring,1)
             self.cursor2.commit()
             self.install_added = self.install_added + 1
 
@@ -664,9 +663,11 @@ class WMIC_dbload:
 
     def end_dates(self):
         # Set Enddate for all records that have not been updated so apparantly do not exist anymore
-        print ("Set enddates")
-        query = "UPDATE dbo.Installation SET EndDateTime = ? WHERE ComputerID = ? and MeasuredDateTime < ? and EndDateTime IS NULL"
-        self.install_ended = self.cursor2.execute(query, self.qd, self.cid, self.qd).rowcount
+        print ("Set enddates cid" + str(self.cid))
+        query = "UPDATE dbo.Installation SET EndDateTime = ?, MeasuredDateTime = ?  WHERE ComputerID = ? and datediff(ss,MeasuredDateTime,CAST(? AS DATETIME)) > 0 and EndDateTime IS NULL"
+        self.install_ended = self.cursor2.execute(query, self.qdatestring, self.qdatestring, self.cid, self.qdatestring).rowcount
+        self.cursor2.execute(query, self.qdatestring, self.qdatestring, self.cid, self.qdatestring)
+        self.cursor2.commit()
         
      
         
@@ -1086,7 +1087,7 @@ elif envir.MyMode == "dbload":
         
         for tuple in c[1]:
             
-            
+            goodfile = "Ok"
             curds = tuple[0]
                      
             firstrec = True
@@ -1117,8 +1118,8 @@ elif envir.MyMode == "dbload":
             
             current_log.log_msg(logmsg,"info",86)
 
-        if (goodfile == "Ok") :                                                     # only if file has not been skipped
-            dbloadobj.end_dates()                                           # set end dates for non found components on this computer
+            if (goodfile == "Ok") :                                             # only if file has not been skipped
+                dbloadobj.end_dates()                                           # set end dates for non found components on this computer
 
         dsntotal = dbloadobj.processed_dsn + dbloadobj.skipped_dsn + dbloadobj.wronghost_dsn
         logmsg = "Total datasets = "+ str(dsntotal) + " *** processed = " + str(dbloadobj.processed_dsn) + " *** skipped (too old) = " + str(dbloadobj.skipped_dsn) + " *** skipped (wrong host) " + str(dbloadobj.wronghost_dsn)
