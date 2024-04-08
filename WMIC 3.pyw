@@ -21,10 +21,10 @@ class config_data:
                 
         # sys.argv = ['The python file', '--mode=create']
         # sys.argv = ['The python file', '--mode=dbload']
-        # sys.argv = ['The python file', '--mode=analyze']
+        sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 06.09"
+        self.Version = "Version 02 Release 07.00"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -53,7 +53,7 @@ class config_data:
         # print (logmsg)
         current_log.log_msg(logmsg,"info",51)
                         
-        ch = subprocess.Popen(["powershell.exe", "-noprofile","-command",initvar, "YES" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
+        ch = subprocess.Popen(["powershell.exe", "-noprofile","-command",initvar, "JSON" ],shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE, universal_newlines = True)
         out,err = ch.communicate()
 
         jsonstring = out
@@ -312,9 +312,9 @@ class My_Logger:
         msgstring = out
         # print("Msgstring = " + msgstring)
 
-        msglist = json.loads(msgstring)
+        copmovobj = json.loads(msgstring)
         errflag = False
-        for msgentry in msglist:
+        for msgentry in copmovobj['MessageList']:
             lvl = msgentry['Level']
             msg = msgentry['Message']
             if lvl == "I":
@@ -329,7 +329,9 @@ class My_Logger:
                 errflag = True
             # print (msg)
             current_log.log_msg(msg,mlvl,99)
-        
+            
+        if (copmovobj['AbEnd']):
+            errflag = True        
         if errflag:
             endmsg = "LOG copy-append action failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
@@ -359,16 +361,17 @@ class Enqueue:
         out,err = ch.communicate()
         
         msgstring = out
-        # print(msgstring)
+        print(msgstring)
 
-        msglist = json.loads(msgstring)
+        lockobj = json.loads(msgstring)
+        print (lockobj)
 
         errflag = False
-        for msgentry in msglist:
+        for msgentry in lockobj['MessageList']:
             lvl = msgentry['Level']
-            # print(lvl)
+            print(lvl)
             msg = msgentry['Message']
-            # print(msg)
+            print(msg)
             if lvl == "I":
                 mlvl = "info"
             elif lvl == "A":
@@ -383,6 +386,8 @@ class Enqueue:
             current_log.log_msg(msg,mlvl,99)
 
         # Force abnormal end if ENQ fails. Logging impossible
+        if (lockobj['AbEnd']):
+            errflag = True
         if errflag:
             endmsg = "Locking resource WMIC failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "L", envir.Version,endmsg) 
@@ -399,10 +404,10 @@ class Enqueue:
         msgstring = out
         # print(msgstring)
 
-        msglist = json.loads(msgstring)
+        lockobj = json.loads(msgstring)
 
         errflag = False
-        for msgentry in msglist:
+        for msgentry in lockobj['MessageList']:
             lvl = msgentry['Level']
             msg = msgentry['Message']
             if lvl == "I":
@@ -418,6 +423,8 @@ class Enqueue:
             current_log.log_msg(msg,mlvl,99)
 
         # Set ERROR flag or not depending on error message
+        if (lockobj['AbEnd']):
+            errflag = True
         if errflag:
             logmsg = "FREEing WMIC resource failed"
             current_log.log_msg(logmsg,"warning",34)
@@ -906,10 +913,10 @@ class report_matrix:
         msgstring = out
         # print(msgstring)
 
-        msglist = json.loads(msgstring)
+        copmovobj = json.loads(msgstring)
 
         errflag = False
-        for msgentry in msglist:
+        for msgentry in copmovobj['MessageList']:
             lvl = msgentry['Level']
             msg = msgentry['Message']
             if lvl == "I":
@@ -925,6 +932,8 @@ class report_matrix:
             
             current_log.log_msg(msg,mlvl,99)
 
+        if (copmovobj['AbEnd']):
+            errflag = True
         if errflag:
             endmsg = "Report move action failed: " + errmsg
             envir.MyJob.writestatus(envir.outputdirectory, envir.jobstatus, envir.computer, envir.JobProcess, "E", envir.Version,endmsg) 
