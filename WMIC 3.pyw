@@ -21,10 +21,10 @@ class config_data:
                 
         # sys.argv = ['The python file', '--mode=create']
         # sys.argv = ['The python file', '--mode=dbload']
-        sys.argv = ['The python file', '--mode=analyze']
+        # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 07.00"
+        self.Version = "Version 02 Release 07.02"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -361,17 +361,17 @@ class Enqueue:
         out,err = ch.communicate()
         
         msgstring = out
-        print(msgstring)
+        # print(msgstring)
 
         lockobj = json.loads(msgstring)
-        print (lockobj)
+        # print (lockobj)
 
         errflag = False
         for msgentry in lockobj['MessageList']:
             lvl = msgentry['Level']
-            print(lvl)
+            # print(lvl)
             msg = msgentry['Message']
-            print(msg)
+            # print(msg)
             if lvl == "I":
                 mlvl = "info"
             elif lvl == "A":
@@ -1247,9 +1247,3 @@ if MyLock.Error:
     rccode = 5
 print ("** ENDED ** rccode = " + str(rccode))  
 sys.exit(rccode)
-
-
-
-
-
- 
