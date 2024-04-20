@@ -9,6 +9,7 @@ from operator import itemgetter
 from datetime import datetime
 from shutil import copyfile
 from pathlib import Path
+import re
 
 # ===================================================================================================================
 class config_data:
@@ -24,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 07.02"
+        self.Version = "Version 02 Release 08.02"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -599,14 +600,39 @@ class WMIC_dbload:
 
         # Check whether component exists, if not, add it
 
-        query = "SELECT ComponentID,VendorID,ComponentName FROM dbo.Component WHERE ComponentName = ?" 
+        componentfound = False
+        
+        query = "SELECT ComponentID,VendorID,ComponentNameTemplate FROM dbo.Component WHERE ComponentNameTemplate = ?" 
         self.cursor.execute(query, ComponentName)
-
         row = self.cursor.fetchone()
         if row:
-            # print (ComponentName + " exists already")
+            print (ComponentName + " exists already in literal form")
             ComponentID = row[0]
             VID = row[1]
+            componentfound = True                 
+        else:
+            # Get all components of this vendor and match pattern
+            print (ComponentName + " trying to find matches")
+            query = "SELECT ComponentID,VendorID,ComponentNameTemplate FROM dbo.Component WHERE VendorID = ?" 
+            comps = self.cursor.execute(query, VendorID)
+            if comps:
+                for comp in comps:
+                    template = re.compile(comp[2].rstrip())
+                    # print (template)
+                    regex = template.match(ComponentName.rstrip())
+                    # print (regex)
+                    if (regex is not None): 
+                        mresult = regex.group()
+                        print (mresult)
+                        if (mresult == ComponentName.rstrip()):
+                            print ("Component " + ComponentName.rstrip() + " matches " + comp[2].rstrip())
+                            ComponentID = comp[0]
+                            VID = comp[1]
+                            componentfound = True
+                            break
+            
+
+        if (componentfound):
             if (VID != VendorID) :
                 logmsg = "Vendor ID mismatch: VENDOR table contains {0}, COMPONENT table contains {1}".format(VendorID, VID)
                 print (logmsg)
@@ -616,25 +642,25 @@ class WMIC_dbload:
                 a=1
                 # print ("Vendor ID matches: {0}".format(VendorID))
             if (self.uniq(ComponentName,self.uniq_component)):
-                self.component_exists = self.component_exists + 1        
-        else:
-            print (ComponentName + " not found - will be inserted")
-            query = "INSERT INTO dbo.Component (ComponentName,VendorID) VALUES (?,?)"
-            self.cursor.execute(query, ComponentName,VendorID)
-            self.cursor.commit()
-            self.cursor.execute("SELECT @@IDENTITY AS ID")
-            ComponentID = self.cursor.fetchone()[0]
-            if (self.uniq(ComponentName,self.uniq_component)):
-                self.component_added = self.component_added + 1
+                self.component_exists = self.component_exists + 1
+        else:                
+                print (ComponentName + " not found - will be inserted")
+                query = "INSERT INTO dbo.Component (ComponentNameTemplate,VendorID) VALUES (?,?)"
+                self.cursor.execute(query, ComponentName,VendorID)
+                self.cursor.commit()
+                self.cursor.execute("SELECT @@IDENTITY AS ID")
+                ComponentID = self.cursor.fetchone()[0]
+                if (self.uniq(ComponentName,self.uniq_component)):
+                    self.component_added = self.component_added + 1
 
-            print ('ComponentID = {0}'.format(ComponentID))
+                print ('ComponentID = {0}'.format(ComponentID))
 
         # Check whether Installation exists, handle   
  
-        query = """SELECT ComputerID,ComponentID,Release,Location,InstallDate,MeasuredDateTime,StartDateTime,EndDateTime,Count
+        query = """SELECT ComputerID,ComponentID,ComponentName,Release,Location,InstallDate,MeasuredDateTime,StartDateTime,EndDateTime,Count
                     FROM dbo.Installation
-                    WHERE Release = ? and ComponentID = ? and ComputerID = ? and EndDateTime IS NULL"""
-        self.cursor.execute(query, Release, ComponentID, ComputerID)
+                    WHERE Release = ? and ComponentID = ? and ComponentName = ? and ComputerID = ? and EndDateTime IS NULL"""
+        self.cursor.execute(query, Release, ComponentID, ComponentName, ComputerID)
 
         rows = self.cursor.fetchall()
         if rows:
@@ -645,8 +671,8 @@ class WMIC_dbload:
                 if (row.MeasuredDateTime == self.qdatetime) :
                     # print ("Record already in database with same MeasuredDateTime, update counter")
                     newcount = row.Count + 1
-                    query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"
-                    self.cursor2.execute(query, newcount, ComputerID, ComponentID, Release, row.StartDateTime)
+                    query = "UPDATE dbo.Installation SET count = ? WHERE ComputerID = ? and ComponentID = ? and ComponentName = ? and Release = ? and StartDateTime = ?"
+                    self.cursor2.execute(query, newcount, ComputerID, ComponentID, ComponentName, Release, row.StartDateTime)
                     self.cursor2.commit()
                     self.install_count = self.install_count + 1       
                 else:
@@ -654,14 +680,14 @@ class WMIC_dbload:
                     # print ("Record has older MeasuredDateTime, update MeasuredDateTime and set count on 1")
                     query = """UPDATE dbo.Installation
                                 SET MeasuredDateTime = ? , Count = 1 
-                                WHERE ComputerID = ? and ComponentID = ? and Release = ? and StartDateTime = ?"""
-                    self.cursor2.execute(query, self.qdatestring, ComputerID, ComponentID, Release, row.StartDateTime)
+                                WHERE ComputerID = ? and ComponentID = ? and ComponentName = ? and Release = ? and StartDateTime = ?"""
+                    self.cursor2.execute(query, self.qdatestring, ComputerID, ComponentID, ComponentName, Release, row.StartDateTime)
                     self.cursor2.commit()
                     self.install_date = self.install_date + 1        
         else:
             print ("Component " + ComponentName + " not found on computer " + ComputerName +", add it") 
-            query = "INSERT INTO dbo.Installation (ComputerID,ComponentID,Release,InstallDate,Location,MeasuredDateTime,StartDateTime,EndDateTime,Count) Values(?,?,?,?,?,?,?,NULL,?)"
-            self.cursor2.execute(query, ComputerID, ComponentID, Release,InstallDate,InstallLocation,self.qdatestring,self.qdatestring,1)
+            query = "INSERT INTO dbo.Installation (ComputerID,ComponentID,ComponentName, Release,InstallDate,Location,MeasuredDateTime,StartDateTime,EndDateTime,Count) Values(?,?,?,?,?,?,?,?,NULL,?)"
+            self.cursor2.execute(query, ComputerID, ComponentID, ComponentName, Release,InstallDate,InstallLocation,self.qdatestring,self.qdatestring,1)
             self.cursor2.commit()
             self.install_added = self.install_added + 1
 
