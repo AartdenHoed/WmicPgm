@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 08.02"
+        self.Version = "Version 02 Release 08.03"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -441,7 +441,7 @@ class WMIC_dbload:
         if (dbload == "Y") :
             import pyodbc
             self.Active = True
-            self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=adhc-2\SQLEXPRESS;DATABASE=Sympa;TRUSTED_CONNECTION=YES')
+            self.cnxn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=adhc-2\\SQLEXPRESS;DATABASE=Sympa;TRUSTED_CONNECTION=YES')
             self.cursor = self.cnxn.cursor()
             self.cursor2 = self.cnxn.cursor()
         else:
