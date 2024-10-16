@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 08.03"
+        self.Version = "Version 02 Release 08.04"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -602,18 +602,18 @@ class WMIC_dbload:
 
         componentfound = False
         
-        query = "SELECT ComponentID,VendorID,ComponentNameTemplate FROM dbo.Component WHERE ComponentNameTemplate = ?" 
+        query = "SELECT ComponentID,VendorID,ComponentNameTemplate,Authorized FROM dbo.Component WHERE ComponentNameTemplate = ?" 
         self.cursor.execute(query, ComponentName)
         row = self.cursor.fetchone()
         if row:
-            print (ComponentName + " exists already in literal form")
+            # print (ComponentName + " exists already in literal form")
             ComponentID = row[0]
             VID = row[1]
             componentfound = True                 
         else:
             # Get all components of this vendor and match pattern
-            print (ComponentName + " trying to find matches")
-            query = "SELECT ComponentID,VendorID,ComponentNameTemplate FROM dbo.Component WHERE VendorID = ?" 
+            # print (ComponentName + " trying to find matches")
+            query = "SELECT ComponentID,VendorID,ComponentNameTemplate,Authorized FROM dbo.Component WHERE VendorID = ?" 
             comps = self.cursor.execute(query, VendorID)
             if comps:
                 for comp in comps:
@@ -623,9 +623,9 @@ class WMIC_dbload:
                     # print (regex)
                     if (regex is not None): 
                         mresult = regex.group()
-                        print (mresult)
+                        # print (mresult)
                         if (mresult == ComponentName.rstrip()):
-                            print ("Component " + ComponentName.rstrip() + " matches " + comp[2].rstrip())
+                            # print ("Component " + ComponentName.rstrip() + " matches " + comp[2].rstrip())
                             ComponentID = comp[0]
                             VID = comp[1]
                             componentfound = True
@@ -645,8 +645,8 @@ class WMIC_dbload:
                 self.component_exists = self.component_exists + 1
         else:                
                 print (ComponentName + " not found - will be inserted")
-                query = "INSERT INTO dbo.Component (ComponentNameTemplate,VendorID) VALUES (?,?)"
-                self.cursor.execute(query, ComponentName,VendorID)
+                query = "INSERT INTO dbo.Component (ComponentNameTemplate,VendorID,Authorized) VALUES (?,?,?)"
+                self.cursor.execute(query, ComponentName,VendorID,"N")
                 self.cursor.commit()
                 self.cursor.execute("SELECT @@IDENTITY AS ID")
                 ComponentID = self.cursor.fetchone()[0]
