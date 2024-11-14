@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 08.04"
+        self.Version = "Version 02 Release 08.05"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -617,7 +617,7 @@ class WMIC_dbload:
             comps = self.cursor.execute(query, VendorID)
             if comps:
                 for comp in comps:
-                    template = re.compile(comp[2].rstrip())
+                    template = re.compile(comp[2].rstrip()+"$",re.IGNORECASE)
                     # print (template)
                     regex = template.match(ComponentName.rstrip())
                     # print (regex)
