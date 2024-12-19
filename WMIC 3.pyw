@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 08.05"
+        self.Version = "Version 02 Release 08.06"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -520,6 +520,8 @@ class WMIC_dbload:
         ComputerName = line[self.comppos:self.comp_end]
         VendorName = line[self.venpos:self.ven_end]
         ComponentName = line[self.namepos:self.name_end]
+        if (ComponentName.strip() == ""):
+            ComponentName = "n/a (" + VendorName + ")"
         Release = line[self.verspos:self.vers_end]
         
         self.qdatestring = line[self.timepos:self.time_end]        
