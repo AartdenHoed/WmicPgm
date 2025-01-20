@@ -25,7 +25,7 @@ class config_data:
         # sys.argv = ['The python file', '--mode=analyze']
         
         # Determine other environment variables
-        self.Version = "Version 02 Release 08.06"
+        self.Version = "Version 02 Release 08.07"
         self.PythonVersion = sys.version
        
         self.PythonFile = os.path.realpath(__file__)
@@ -647,8 +647,8 @@ class WMIC_dbload:
                 self.component_exists = self.component_exists + 1
         else:                
                 print (ComponentName + " not found - will be inserted")
-                query = "INSERT INTO dbo.Component (ComponentNameTemplate,VendorID,Authorized) VALUES (?,?,?)"
-                self.cursor.execute(query, ComponentName,VendorID,"N")
+                query = "INSERT INTO dbo.Component (ComponentNameTemplate,VendorID,Authorized,Origin) VALUES (?,?,?,?)"
+                self.cursor.execute(query, ComponentName,VendorID,"N","WMIC")
                 self.cursor.commit()
                 self.cursor.execute("SELECT @@IDENTITY AS ID")
                 ComponentID = self.cursor.fetchone()[0]
@@ -697,9 +697,10 @@ class WMIC_dbload:
 
 
     def end_dates(self):
-        # Set Enddate for all records that have not been updated so apparantly do not exist anymore
+        # Set Enddate for all records that have not been updated so apparantly do not exist anymore, don't do this for manual entries
         print ("Set enddates cid" + str(self.cid))
-        query = "UPDATE dbo.Installation SET EndDateTime = ?, MeasuredDateTime = ?  WHERE ComputerID = ? and datediff(ss,MeasuredDateTime,CAST(? AS DATETIME)) > 0 and EndDateTime IS NULL"
+        query = """UPDATE dbo.Installation SET EndDateTime = ?, MeasuredDateTime = ?  WHERE ComputerID = ? and datediff(ss,MeasuredDateTime,CAST(? AS DATETIME)) > 0 and EndDateTime IS NULL
+                and (ComponentID not in (select ComponentID from [Sympa].[dbo].[Component] where Origin = 'Manual'))"""
         self.install_ended = self.cursor2.execute(query, self.qdatestring, self.qdatestring, self.cid, self.qdatestring).rowcount
         self.cursor2.execute(query, self.qdatestring, self.qdatestring, self.cid, self.qdatestring)
         self.cursor2.commit()
